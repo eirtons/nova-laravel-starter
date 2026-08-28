@@ -60,10 +60,8 @@ else
     echo "⏭️  public/build/manifest.json 已存在，跳过前端构建"
 fi
 
-# 3. 生成 .env 文件
-if [ ! -f ".env" ] || ! grep -q '^COMPOSE_PROJECT_NAME=' .env; then
-    echo ""
-    echo "📝 使用 Docker 模板生成 .env..."
+# 3. 生成 .env 文件（绝不静默覆盖已有配置）
+generate_env() {
     cp .env.docker.example .env
 
     DB_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
@@ -77,6 +75,19 @@ if [ ! -f ".env" ] || ! grep -q '^COMPOSE_PROJECT_NAME=' .env; then
     sed "${SED_INPLACE[@]}" "s/^DB_DATABASE=.*/DB_DATABASE=$DB_NAME/" .env
 
     echo "✅ .env 文件已生成（项目名: $PROJECT_NAME）"
+}
+
+if [ ! -f ".env" ]; then
+    echo ""
+    echo "📝 使用 Docker 模板生成 .env..."
+    generate_env
+elif ! grep -q '^APP_PORT=' .env; then
+    ENV_BACKUP=".env.bak.$(date +%Y%m%d%H%M%S)"
+    echo ""
+    echo "📝 现有 .env 不含 Docker 端口配置，切换为 Docker 模板..."
+    cp .env "$ENV_BACKUP"
+    generate_env
+    echo "⚠️  原 .env 已备份为 $ENV_BACKUP，请自行迁移其中的自定义配置"
 else
     echo "⏭️  已存在 Docker .env，保留现有配置"
 fi
