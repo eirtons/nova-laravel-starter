@@ -4,6 +4,7 @@ set -e
 
 PROJECT_NAME="${1:-$(basename "$(pwd)")}"
 DOCKER_PROJECT_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')"
+ENV_TEMPLATE=".env.docker.example"
 
 echo "🚀 正在初始化项目: $PROJECT_NAME"
 echo ""
@@ -16,53 +17,61 @@ if [ "${2:-}" = "--reset" ] && [ -x "vendor/bin/sail" ]; then
     echo ""
 fi
 
-# 1. 安装 Composer 依赖
-if [ ! -x "vendor/bin/sail" ]; then
-    echo "📦 安装 Composer 依赖..."
+# 在一次性容器里执行命令，避免宿主机必须装 PHP / Node
+run_in() {
+    local image="$1"; shift
     docker run --rm \
         -u "$(id -u):$(id -g)" \
         -v "$(pwd):/srv/$(basename "$(pwd)")" \
         -w "/srv/$(basename "$(pwd)")" \
-        laravelsail/php82-composer:latest \
-        composer install --ignore-platform-reqs
+        "$image" "$@"
+}
+
+# 1. 安装 Composer 依赖
+if [ ! -x "vendor/bin/sail" ]; then
+    echo "📦 安装 Composer 依赖..."
+    run_in laravelsail/php82-composer:latest composer install --ignore-platform-reqs
     echo "✅ Composer 依赖安装完成"
 else
     echo "⏭️  vendor/ 已存在，跳过 composer install"
 fi
 
-# 2. 安装 Node 依赖并构建前端资源
-if [ ! -d "node_modules" ]; then
+# 2. 安装 Node 依赖
+if [ -f "package.json" ] && [ ! -d "node_modules" ]; then
     echo ""
     echo "📦 安装 Node 依赖..."
-    docker run --rm \
-        -u "$(id -u):$(id -g)" \
-        -v "$(pwd):/srv/$(basename "$(pwd)")" \
-        -w "/srv/$(basename "$(pwd)")" \
-        node:24-bookworm-slim \
-        npm install
+    run_in node:24-bookworm-slim npm install
     echo "✅ Node 依赖安装完成"
 else
-    echo "⏭️  node_modules/ 已存在，跳过 npm install"
+    echo "⏭️  跳过 npm install"
 fi
 
-# 2.1 构建前端资源（缺少 manifest 会导致页面 500）
-if [ ! -f "public/build/manifest.json" ]; then
-    echo ""
-    echo "🎨 构建前端资源..."
-    docker run --rm \
-        -u "$(id -u):$(id -g)" \
-        -v "$(pwd):/srv/$(basename "$(pwd)")" \
-        -w "/srv/$(basename "$(pwd)")" \
-        node:24-bookworm-slim \
-        npm run build
-    echo "✅ 前端资源构建完成"
-else
-    echo "⏭️  public/build/manifest.json 已存在，跳过前端构建"
+# 2.1 构建前端资源（缺少产物会导致页面 500）
+# Vite 项目看 public/build/manifest.json，Laravel Mix 项目看 public/mix-manifest.json
+if [ -f "package.json" ]; then
+    if grep -q '"build"' package.json; then
+        BUILD_SCRIPT=build
+        BUILD_MANIFEST=public/build/manifest.json
+    elif grep -q '"production"' package.json; then
+        BUILD_SCRIPT=production
+        BUILD_MANIFEST=public/mix-manifest.json
+    else
+        BUILD_SCRIPT=""
+    fi
+
+    if [ -n "$BUILD_SCRIPT" ] && [ ! -f "$BUILD_MANIFEST" ]; then
+        echo ""
+        echo "🎨 构建前端资源（npm run $BUILD_SCRIPT）..."
+        run_in node:24-bookworm-slim npm run "$BUILD_SCRIPT"
+        echo "✅ 前端资源构建完成"
+    else
+        echo "⏭️  跳过前端构建"
+    fi
 fi
 
 # 3. 生成 .env 文件（绝不静默覆盖已有配置）
 generate_env() {
-    cp .env.docker.example .env
+    cp "$ENV_TEMPLATE" .env
 
     DB_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
     if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -93,9 +102,9 @@ else
 fi
 
 # 读取端口配置，供后续提示使用
-APP_PORT="$(grep -E '^APP_PORT=' .env | cut -d= -f2)"
-DB_PORT_HOST="$(grep -E '^FORWARD_DB_PORT=' .env | cut -d= -f2)"
-DB_DATABASE="$(grep -E '^DB_DATABASE=' .env | cut -d= -f2)"
+APP_PORT="$(grep -E '^APP_PORT=' .env | tail -1 | cut -d= -f2)"
+DB_PORT_HOST="$(grep -E '^FORWARD_DB_PORT=' .env | tail -1 | cut -d= -f2)"
+DB_DATABASE="$(grep -E '^DB_DATABASE=' .env | tail -1 | cut -d= -f2)"
 
 # 4. 启动 Docker 容器
 echo ""
@@ -128,10 +137,11 @@ else
     ./vendor/bin/sail artisan key:generate
 fi
 
-# 6. 运行数据库迁移和填充
+# 6. 迁移与填充（seeder 多不幂等，重复初始化时失败不阻断）
 echo ""
 echo "🗄️  初始化数据库..."
-./vendor/bin/sail artisan migrate --seed --force
+./vendor/bin/sail artisan migrate --force
+./vendor/bin/sail artisan db:seed --force || echo "⚠️  seeder 执行失败（通常是已初始化过），已跳过"
 
 echo ""
 echo "✨ 初始化完成！"
@@ -145,7 +155,7 @@ echo "📋 常用命令:"
 echo "   ./vendor/bin/sail up -d                       # 启动"
 echo "   ./vendor/bin/sail down                        # 停止"
 echo "   ./vendor/bin/sail artisan <cmd>               # Artisan"
-echo "   ./vendor/bin/sail npm run dev                 # Vite 热更新"
+echo "   ./vendor/bin/sail npm run dev                 # 前端热更新"
 echo "   ./vendor/bin/sail logs -f                     # 日志"
 echo "   ./vendor/bin/sail --profile queue up -d       # 附带队列 worker"
 echo "   ./vendor/bin/sail --profile scheduled up -d   # 附带调度器"
