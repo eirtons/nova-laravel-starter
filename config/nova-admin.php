@@ -4,6 +4,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | 信任代理
+    |--------------------------------------------------------------------------
+    | 站点普遍跑在 Nginx/CDN 后面，不信任代理会导致 https 判断和真实 IP 出错。
+    | '*' = 信任全部（默认）；留空则不注册，交由项目自己的 TrustProxies 配置决定。
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES', '*'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filament Panel
     |--------------------------------------------------------------------------
     | install 命令会自动将插件接入此 ID 的 Panel，无需手动修改 PanelProvider。
@@ -40,6 +49,34 @@ return [
         'home_banner2'   => '首页 Banner 2',
         'detail_banner1' => '详情页 Banner 1',
         'detail_banner2' => '详情页 Banner 2',
+        'anchor'         => 'Anchor（锚定）',
+        'interstitial'   => 'Interstitial（插屏）',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 站点广告配置下发协议（webdeploy）
+    |--------------------------------------------------------------------------
+    | `php artisan ads:import-site-ad-config <file>` 读取 webdeploy 下发的 JSON，
+    | 把 GAM 广告位代码写入 ad_spots、ads.txt 走 PublicTextFileService。
+    |
+    | position_map：协议键 → 本包 ad_positions 的 position。协议键带下划线分隔
+    | （home_banner_1），本包 position 不带（home_banner1），必须显式映射。
+    | 未在此列出的协议键一律判为未知键并整体失败；映射目标也必须在 ad_positions 里，
+    | 否则写进去 AdService 也不会输出。站点若只用部分广告位，删掉对应行即可。
+    */
+    'ads_protocol' => [
+        'version'         => 1,
+        'global_head_key' => 'global_head',
+        'position_map'    => [
+            'global_head'      => 'global_head',
+            'home_banner_1'    => 'home_banner1',
+            'home_banner_2'    => 'home_banner2',
+            'detail_banner_1'  => 'detail_banner1',
+            'detail_banner_2'  => 'detail_banner2',
+            'anchor'           => 'anchor',
+            'interstitial'     => 'interstitial',
+        ],
     ],
 
     /*
@@ -157,6 +194,24 @@ return [
         'cache_key'   => 'nova_admin:sitemap',
         'urls'        => [
             ['loc' => '/', 'changefreq' => 'daily', 'priority' => '1.0'],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 站点设置页的上传限制
+    |--------------------------------------------------------------------------
+    | max_size 单位 KB，0 = 不限制（交给 PHP upload_max_filesize 兜底）。
+    | favicon 默认不收 SVG：SVG 可内嵌脚本，且部分浏览器标签页支持不稳定；
+    | 站点确需 SVG 时在 accepted_types 里加回 'image/svg+xml'。
+    */
+    'site_settings' => [
+        'favicon' => [
+            'accepted_types' => ['image/x-icon', 'image/png'],
+            'max_size'       => 1024,
+        ],
+        'logo' => [
+            'max_size' => 2048,
         ],
     ],
 
