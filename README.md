@@ -15,7 +15,8 @@ cd myhub
 ./init.sh myhub        # 依赖 + .env + 前端构建 + 起容器 + migrate + seed
 ```
 
-多个项目并存时改 `.env` 的 `APP_PORT` 与 `FORWARD_DB_PORT`，避免端口冲突。
+多个项目并存不用手工分配端口：`init.sh` 起容器前会探测宿主机监听表，
+`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` 撞上别人就自动往后挪，并同步改写 `APP_URL`。
 
 起来之后按这个顺序做：
 
@@ -43,56 +44,94 @@ cd myhub
 
    静态页（法务五件套）在后台「静态页面」填，页脚链接自动按启用状态展示。
 
-## 本地 Docker 开发
+## 本地 Docker 开发（Laravel Sail）
 
 要求：Docker Desktop（WSL2）或 Docker Engine 与 Docker Compose。
 
-若本机尚未配置 `sail` 命令，先将下面的 alias 加入 shell 配置文件（如 `~/.bashrc`）：
+把 alias 加进 shell 配置文件（如 `~/.bashrc`）会方便很多：
 
 ```bash
 alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'
 ```
 
-使用 Composer 创建项目：
+### init.sh 做了什么
 
 ```bash
-composer create-project inova/nova-laravel-starter myhub
-cd myhub
+./init.sh                  # 项目名取当前目录名
+./init.sh MyNewSite        # 显式指定：容器前缀 mynewsite，数据库 mynewsite
+./init.sh myhub --reset    # 推倒重来（会删除数据卷！）
 ```
 
-创建命令会安装依赖、生成 `.env` 与应用密钥；不会连接或迁移数据库。
+依次完成：装依赖 → 生成 `.env` → 前端构建 → 探测端口 → 起容器 → 迁移 + 填充。
 
-默认访问地址为 <http://127.0.0.1:8000>，后台登录入口为 <http://127.0.0.1:8000/admin/login>。
-本地初始化后的后台账号固定为 `nova`，密码固定为 `nova`；这是 Starter 的开发环境约定，不需要另建管理员。
+关于 `.env`，它**绝不静默覆盖已有配置**，三条分支：
 
-使用 Sail 初始化本地环境：
+| `.env` 状态 | 行为 |
+| --- | --- |
+| 不存在 | 用 `.env.docker.example` 生成 |
+| 存在但不含 `APP_PORT` | 备份为 `.env.bak.<时间戳>` 后重新生成，并提示自行迁移自定义配置 |
+| 存在且含 `APP_PORT` | 保留，只在端口冲突时改写端口相关键 |
+
+`composer create-project` 会先用 `.env.example` 造一个 `.env`，它不含 Docker 端口键，
+所以新项目走的是中间那条分支——留下一个 `.env.bak.*` 是正常的，已在 `.gitignore` 里。
+
+项目名参数影响 `COMPOSE_PROJECT_NAME`（转小写）、`APP_NAME`、`DB_DATABASE`（转小写，`-` 换 `_`），
+且只在生成 `.env` 时写入。`--reset` 是第二个位置参数，单独传 `./init.sh --reset` 会被当成项目名。
+
+### 端口
+
+`.env.docker.example` 的默认值是 HTTP `8014`、Vite `5187`、MySQL `33075`，
+但本机多个 Starter 项目并存时几乎必然撞车，所以 `init.sh` 在 `sail up` **之前**先探测：
+
+- 端口被别的进程或别的项目容器占着 → 自动往后找空闲端口，改写 `.env`，`APP_URL` 跟着同步
+- 端口被本项目自己的容器占着 → 视为正常，重复执行 `init.sh` 不会导致端口漂移
+
+所有端口只绑定 `127.0.0.1`，不对外暴露。要手工指定就改 `.env` 里的
+`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT`——**改 `compose.yaml` 无效**，
+里面的 `${APP_PORT:-8014}` 只是 `.env` 缺键时的兜底默认值。
+
+实际地址以 `init.sh` 结尾打印的为准：应用 `http://127.0.0.1:${APP_PORT}`，
+后台入口 `http://127.0.0.1:${APP_PORT}/admin/login`。
+本地后台账号固定 `nova` / `nova`，这是开发环境约定，不需要另建管理员。
+
+### 常用命令
 
 ```bash
-cp .env.docker.example .env
-# 修改 COMPOSE_PROJECT_NAME、APP_NAME、APP_URL、APP_PORT、FORWARD_DB_PORT、DB_DATABASE 等本地参数
-sail up -d
-sail artisan key:generate
-sail artisan migrate --seed
-```
-
-`sail up -d` 默认启动 Laravel 与 MySQL。需要异步任务时启动 queue profile；需要定时任务时启动 scheduled profile：
-
-```bash
-sail --profile queue up -d
-sail --profile scheduled up -d
-```
-
-常用命令：
-
-```bash
+sail up -d          # 启动
+sail down           # 停止（保留数据）
+sail down -v        # 停止并删除数据卷
+sail ps             # 查看容器
+sail logs -f        # 跟踪日志
 sail artisan migrate
 sail artisan test
-sail logs -f
-sail down
+sail artisan tinker
+sail npm run dev    # Vite 热更新（需与 .env 的 VITE_PORT 一致）
 ```
 
-MySQL 在容器内使用 `mysql:3306`，宿主机访问 `127.0.0.1:${FORWARD_DB_PORT}`，默认端口为 `33061`。
-`COMPOSE_PROJECT_NAME` 决定 Docker 容器、网络和数据卷的名称前缀；使用小写项目标识，例如 `myhub`。
+### 可选服务（profile）
+
+默认只起 `laravel.test` + `mysql`。队列和调度器按需启动：
+
+```bash
+sail --profile queue up -d       # 加 queue:work
+sail --profile scheduled up -d   # 加 schedule:work
+```
+
+### 连接数据库
+
+容器内用 `mysql:3306`；宿主机 GUI 工具或命令行用 `127.0.0.1:${FORWARD_DB_PORT}`：
+
+```bash
+mysql -h 127.0.0.1 -P ${FORWARD_DB_PORT} -u sail -psail ${DB_DATABASE}
+```
+
+### 注意
+
+- `.env` 中含空格的值必须加引号（例如 `APP_NAME="Nova Starter"`），
+  否则容器会因 dotenv 解析失败反复重启并返回 503。
+- 改完 `.env` 后需 `sail restart laravel.test` 才生效。
+- 若卡在「等待 MySQL 就绪」，先看容器的 PORTS 一列有没有 `127.0.0.1:xxxx->` 映射；
+  没有说明端口绑定失败、容器是半成品，`sail down -v` 后重跑 `init.sh` 即可。
 
 ## 传统 LNMP 部署
 
