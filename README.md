@@ -4,6 +4,45 @@
 
 本地开发使用 Sail；生产环境继续使用 PHP-FPM、Nginx 与 Supervisor，不使用 Docker Compose。
 
+**项目约定见 [AGENTS.md](AGENTS.md)**（`CLAUDE.md` 是它的软链）。广告契约、前台文案语言、
+env 双模板同步等规则都在那里，动模板和配置前先读。
+
+## 基于 Starter 开新项目
+
+```bash
+composer create-project inova/nova-laravel-starter myhub
+cd myhub
+./init.sh myhub        # 依赖 + .env + 前端构建 + 起容器 + migrate + seed
+```
+
+多个项目并存时改 `.env` 的 `APP_PORT` 与 `FORWARD_DB_PORT`，避免端口冲突。
+
+起来之后按这个顺序做：
+
+1. **先定广告位，再写业务。** 广告位是站点的结构性决定，页面按它排版，不是最后往页面上贴。
+   按站点实际裁剪 `config/nova-admin.php` 的 `ad_positions`，**同步删 `ads_protocol.position_map`
+   里对应的行**（两者必须一致）。改完跑：
+
+   ```bash
+   sail artisan nova-admin:doctor    # 配置一致性自检
+   sail artisan test                 # 三个契约测试必须全绿
+   ```
+
+2. **写页面时照 `resources/views/home.blade.php` 抄。** head/body 成对、`global_head` 排最后、
+   浮层位 `:wrapper="false"` —— 细节见 AGENTS.md 的广告契约一节。
+   `sail artisan ad:seed` 可填测试广告肉眼验证排版，看完 `--off` 关掉。
+
+3. **栏目级关广告**按需接入：布局判断的是 `$section->ads_enabled`，鸭子类型，
+   自己的栏目模型加个 `ads_enabled` 字段即可，Starter 不预设栏目结构。
+
+4. **上线前**导入广告代码与 ads.txt：
+
+   ```bash
+   sail artisan ads:import-site-ad-config <webdeploy下发的.json>
+   ```
+
+   静态页（法务五件套）在后台「静态页面」填，页脚链接自动按启用状态展示。
+
 ## 本地 Docker 开发
 
 要求：Docker Desktop（WSL2）或 Docker Engine 与 Docker Compose。

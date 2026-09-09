@@ -17,10 +17,11 @@
         <p class="mt-4 text-base leading-7 text-neutral-600">
             {{ site_config('site_description', config('nova-admin.static_pages.site_description')) }}
         </p>
+        {{-- CTA 指向站内静态页；后台入口是 /admin，不要挂在首页上让爬虫顺藤摸瓜 --}}
         <div class="mt-6 flex flex-wrap gap-3">
-            <a href="{{ url('/admin') }}"
+            <a href="{{ url('/about') }}"
                class="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700">
-                进入后台
+                Learn more
             </a>
         </div>
     </section>
@@ -32,9 +33,9 @@
         {{-- 内容卡片占位：新项目换成自己的列表 / 工具入口 --}}
         @foreach (range(1, 3) as $i)
             <article class="rounded-lg border border-neutral-200 p-5">
-                <h2 class="text-sm font-medium text-neutral-900">内容位 {{ $i }}</h2>
+                <h2 class="text-sm font-medium text-neutral-900">Section {{ $i }}</h2>
                 <p class="mt-2 text-sm leading-6 text-neutral-500">
-                    替换为实际内容。布局与广告位的相对关系保持不变即可。
+                    Placeholder content. Replace with your own, keeping the ad slots where they are.
                 </p>
             </article>
         @endforeach
