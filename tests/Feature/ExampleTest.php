@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
+    // 首页投了广告位，渲染时要查 ad_spots。
+    use RefreshDatabase;
+
     /**
      * A basic test example.
      */

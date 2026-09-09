@@ -173,7 +173,8 @@ return [
         ],
         'frontend' => [
             'enabled'    => env('NOVA_STATIC_FRONTEND', false),
-            'view'       => 'nova-admin::static-page',
+            // 用项目模板替代包内兜底模板，法务页与站点共用页眉页脚。
+            'view'       => 'pages.show',
             'route_name' => 'pages.show',
         ],
     ],
