@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\ViewErrorBag;
 use Inova\NovaAdmin\Models\StaticPage;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 前台公开路由不挂 web 组，没有 ShareErrorsFromSession 注入 $errors，
+        // 视图里引用 $errors 会直接 500。共享一个空袋子兜底；
+        // web 组的请求仍由 ShareErrorsFromSession 覆盖成真实错误，不受影响。
+        View::share('errors', new ViewErrorBag);
+
         // 页脚法务链接。硬编码 slug 会在后台停用某页后指向 404，所以按启用状态取，
         // 顺序由 static_pages.presets 决定（后台新增的页排在预置页之后）。
         View::composer('layouts.app', function ($view): void {

@@ -1,7 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| 需要会话的路由放这里（表单、登录态、flash 消息）。
+| 只读的前台页面放 routes/public.php，那里不启会话、可被 CDN 边缘缓存。
+| 后台由 Filament 的 PanelProvider 自行注册，不经过这两个文件。
+|
+*/
