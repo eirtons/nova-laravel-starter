@@ -3,6 +3,10 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.1.4] - 2026-09-23
+
+- 测试基类调用 `withoutVite()`：`create-project` 后或 CI 里未构建前端时，`FrontendSmokeTest` 不再因缺少 Vite manifest 失败
+
 ## [2.1.3] - 2026-09-23
 
 - 安全：`league/commonmark` 2.9.0 → 2.10.3（修复 4 个高危：3 个拒绝服务、1 个 AttributesExtension `on*` 过滤绕过导致的 XSS），
