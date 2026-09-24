@@ -5,18 +5,15 @@
     模板契约：$page->title / $page->body_html（已剥标题 H1）/ $page->meta_description。
 
     这类页面不投任何内容广告位：正文稀薄，投 banner 既无收益也踩政策线。
-    浮层位（anchor / interstitial）由 AppServiceProvider 注入的 $section->ads_enabled=false
+    浮层位（anchor / interstitial）由 nova-admin 按 ad_disabled_views 注入的 $section->ads_enabled=false
     关掉——插屏弹在隐私政策页上，体验和审核观感都差；global_head 不受该开关影响，
     站点级脚本（统计、站点验证）照常加载。
 --}}
 @extends('layouts.app')
 
-@section('title', $page->title.' - '.site_config('site_name', config('app.name')))
+@section('title', $page->title)
 @section('description', $page->meta_description)
-
-@push('head')
-    <link rel="canonical" href="{{ url('/'.$page->slug) }}">
-@endpush
+@section('canonical', url('/'.$page->slug))
 
 @section('content')
     <article class="max-w-2xl">

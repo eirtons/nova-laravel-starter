@@ -3,6 +3,16 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.1.0] - 2026-09-23
+
+- 依赖升至 `inova/nova-admin` ^2.2；布局改用 `<x-nova-seo />`，后台「站点设置」的标题模板、描述、关键词、
+  Favicon、Logo、副标题、版权在前台生效（此前只用了站点名）；页面只写 `@section('title', '页面标题')`
+- env 模板合并为 `.env.example` 一份，`init.sh` 生成 `.env` 时补 Sail 专属键；删除 `.env.docker.example` 与 `EnvTemplateContractTest`
+- 前端去掉未使用的 axios、`resources/js/bootstrap.js`、concurrently 与未加载的 Instrument Sans 字体声明
+- 去掉与 `init.sh` 重复且假设宿主机环境的 composer `setup` / `dev` 脚本，以及 inspire 示例命令
+- `ExampleTest` 改为 `FrontendSmokeTest`：首页 SEO 与 404 模板
+- README 与 AGENTS.md 去重：README 讲启动与部署，AGENTS.md 讲约定
+
 ## [2.0.0] - 2026-09-23
 
 Starter 收敛为「Laravel + nova-admin + 前台薄骨架」，通用逻辑全部由 `inova/nova-admin` ^2.1 提供。

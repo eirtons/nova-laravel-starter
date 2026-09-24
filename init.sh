@@ -4,7 +4,6 @@ set -e
 
 PROJECT_NAME="${1:-$(basename "$(pwd)")}"
 DOCKER_PROJECT_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')"
-ENV_TEMPLATE=".env.docker.example"
 
 echo "🚀 正在初始化项目: $PROJECT_NAME"
 echo ""
@@ -108,41 +107,50 @@ next_free_port() {
 }
 
 # 3. 生成 .env 文件（绝不静默覆盖已有配置）
-generate_env() {
-    cp "$ENV_TEMPLATE" .env
-
-    DB_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        SED_INPLACE=(-i '')
+# 只维护一份模板 .env.example（也是 LNMP 生产用的），Sail 专属的键在这里补上或改写。
+set_env() {
+    if grep -qE "^$1=" .env; then
+        sed "${SED_INPLACE[@]}" "s#^$1=.*#$1=$2#" .env
     else
-        SED_INPLACE=(-i)
+        printf '%s=%s\n' "$1" "$2" >> .env
     fi
-    sed "${SED_INPLACE[@]}" "s/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=$DOCKER_PROJECT_NAME/" .env
-    sed "${SED_INPLACE[@]}" "s/^APP_NAME=.*/APP_NAME=$PROJECT_NAME/" .env
-    sed "${SED_INPLACE[@]}" "s/^DB_DATABASE=.*/DB_DATABASE=$DB_NAME/" .env
+}
+
+generate_env() {
+    cp .env.example .env
 
     # 新项目直接挑空闲端口，免得跟已在跑的其他 Starter 项目撞。
-    NEW_APP_PORT="$(next_free_port "$(grep -E '^APP_PORT=' .env | tail -1 | cut -d= -f2)")"
-    NEW_VITE_PORT="$(next_free_port "$(grep -E '^VITE_PORT=' .env | tail -1 | cut -d= -f2)")"
-    NEW_DB_PORT="$(next_free_port "$(grep -E '^FORWARD_DB_PORT=' .env | tail -1 | cut -d= -f2)")"
+    NEW_APP_PORT="$(next_free_port 8014)"
+    NEW_VITE_PORT="$(next_free_port 5187)"
+    NEW_DB_PORT="$(next_free_port 33075)"
 
-    sed "${SED_INPLACE[@]}" "s/^APP_PORT=.*/APP_PORT=$NEW_APP_PORT/" .env
-    sed "${SED_INPLACE[@]}" "s/^VITE_PORT=.*/VITE_PORT=$NEW_VITE_PORT/" .env
-    sed "${SED_INPLACE[@]}" "s/^FORWARD_DB_PORT=.*/FORWARD_DB_PORT=$NEW_DB_PORT/" .env
+    printf '\n# Sail（init.sh 生成）\n' >> .env
+    set_env COMPOSE_PROJECT_NAME "$DOCKER_PROJECT_NAME"
+    set_env APP_NAME "$PROJECT_NAME"
     # APP_URL 必须跟着 APP_PORT 走，否则站内生成的链接全指向旧端口。
-    sed "${SED_INPLACE[@]}" "s#^APP_URL=.*#APP_URL=http://127.0.0.1:$NEW_APP_PORT#" .env
+    set_env APP_URL "http://127.0.0.1:$NEW_APP_PORT"
+    set_env APP_PORT "$NEW_APP_PORT"
+    set_env VITE_PORT "$NEW_VITE_PORT"
+    set_env FORWARD_DB_PORT "$NEW_DB_PORT"
+    set_env WWWUSER "$(id -u)"
+    set_env WWWGROUP "$(id -g)"
+    set_env DB_HOST mysql
+    set_env DB_DATABASE "$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
+    set_env DB_USERNAME sail
+    set_env DB_PASSWORD sail
+    set_env DB_ROOT_PASSWORD root_password
 
     echo "✅ .env 文件已生成（项目名: $PROJECT_NAME，端口: $NEW_APP_PORT / $NEW_VITE_PORT / $NEW_DB_PORT）"
 }
 
 if [ ! -f ".env" ]; then
     echo ""
-    echo "📝 使用 Docker 模板生成 .env..."
+    echo "📝 由 .env.example 生成 Sail 用的 .env..."
     generate_env
 elif ! grep -q '^APP_PORT=' .env; then
     ENV_BACKUP=".env.bak.$(date +%Y%m%d%H%M%S)"
     echo ""
-    echo "📝 现有 .env 不含 Docker 端口配置，切换为 Docker 模板..."
+    echo "📝 现有 .env 不含 Docker 端口配置，重新生成 Sail 用的 .env..."
     cp .env "$ENV_BACKUP"
     generate_env
     echo "⚠️  原 .env 已备份为 $ENV_BACKUP，请自行迁移其中的自定义配置"

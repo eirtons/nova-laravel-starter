@@ -1,21 +1,14 @@
 # Nova Laravel Starter
 
-基于 Laravel 12、PHP 8.2、MySQL 5.7、Laravel Sail 和 `inova/nova-admin` 的项目起始模板。
+投放广告的英文内容站起始模板：Laravel 12 + PHP 8.2 + MySQL 5.7 + `inova/nova-admin`。
+本地用 Sail，生产用 PHP-FPM + Nginx + Supervisor。
 
-本地开发使用 Sail；生产环境继续使用 PHP-FPM、Nginx 与 Supervisor，不使用 Docker Compose。
+后台、广告、站点设置、SEO、静态页、前台缓存等通用能力都在 `inova/nova-admin` 包里，
+**所有站点通用的改动改包、发版，项目 `composer update` 即得**。本 Starter 只放每站都要改的前台骨架。
 
-**项目约定见 [AGENTS.md](AGENTS.md)**（`CLAUDE.md` 是它的软链）。广告契约、前台文案语言、
-env 双模板同步等规则都在那里，动模板和配置前先读。
+**开发约定见 [AGENTS.md](AGENTS.md)**（`CLAUDE.md` 是它的软链），动模板和配置前先读。
 
-## 与 nova-admin 的分工
-
-`inova/nova-admin` 是底层核心库：后台功能、广告与站点配置、前台缓存（`nova.public`）、HSTS、
-页脚静态页注入、配置默认值都在包里。**所有站点通用的改动都改包、发版，项目 `composer update` 即得**，
-不要在项目里复制一份。本 Starter 只保留每站都要改的前台骨架：布局、页面模板、路由、env、init.sh。
-
-`config/nova-admin.php` 只写与包默认不同的部分（合并规则见文件头注释），包新增的广告位等配置升级后自动继承。
-
-## 基于 Starter 开新项目
+## 开新项目
 
 ```bash
 composer create-project inova/nova-laravel-starter myhub
@@ -23,164 +16,59 @@ cd myhub
 ./init.sh myhub        # 依赖 + .env + 前端构建 + 起容器 + migrate + seed
 ```
 
-多个项目并存不用手工分配端口：`init.sh` 起容器前会探测宿主机监听表，
-`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` 撞上别人就自动往后挪，并同步改写 `APP_URL`。
+结尾会打印访问地址；后台 `/admin`，本地账号固定 `nova` / `nova`。然后：
 
-起来之后按这个顺序做：
+1. **先定广告位**：通用位由包提供，本站专属位在 `config/nova-admin.php` 追加，改完跑
+   `sail artisan nova-admin:doctor`。
+2. **写页面**：照 `resources/views/home.blade.php` 抄，页面只写 `@section('title', ...)` 和内容，
+   SEO 与布局级广告由布局统一输出。`sail artisan ad:seed` 填测试广告看排版，`--off` 关掉。
+3. **后台「站点设置」**填站点名、副标题、SEO、Favicon / Logo，前台即时生效；「静态页面」填法务页。
+4. **上线前**导入广告代码与 ads.txt：`sail artisan ads:import-site-ad-config <webdeploy下发的.json>`。
 
-1. **先定广告位，再写业务。** 广告位是站点的结构性决定，页面按它排版，不是最后往页面上贴。
-   通用广告位由包提供；本站专属位在 `config/nova-admin.php` 的 `ad_positions` 与
-   `ads_protocol.position_map` 里追加（去掉包内某位写 `false`，两处同步）。改完跑：
-
-   ```bash
-   sail artisan nova-admin:doctor    # 配置一致性 + 模板渲染点自检
-   sail artisan test                 # 契约测试必须全绿
-   ```
-
-2. **写页面时照 `resources/views/home.blade.php` 抄。** 内容位 head/body 成对；浮层位与
-   `global_head` 由布局里的 `<x-ad-layout-head/body />` 统一输出，不用管 —— 细节见 AGENTS.md 的广告契约一节。
-   `sail artisan ad:seed` 可填测试广告肉眼验证排版，看完 `--off` 关掉。
-
-3. **栏目级关广告**按需接入：布局判断的是 `$section->ads_enabled`，鸭子类型，
-   自己的栏目模型加个 `ads_enabled` 字段即可，Starter 不预设栏目结构。
-
-4. **上线前**导入广告代码与 ads.txt：
-
-   ```bash
-   sail artisan ads:import-site-ad-config <webdeploy下发的.json>
-   ```
-
-   静态页（法务五件套）在后台「静态页面」填，页脚链接自动按启用状态展示。
-
-## Starter 的来源与发版
-
-Starter = `laravel new` + `composer require inova/nova-admin` + `php artisan nova-admin:install` + 前台骨架
-（`resources/views`、`routes/public.php`、`bootstrap/app.php` 的 nova.public 路由组、env 模板、`init.sh`、`AGENTS.md`）。
-Laravel 升大版本时按这个顺序重新生成，再把前台骨架拷回来，不必手工比对差异。
-
-`composer create-project` 取 Packagist 上最新 tag：**Starter 有改动就打 tag**（主版本号与 nova-admin 对齐），并记入 `CHANGELOG.md`。
-
-## 联调 nova-admin
-
-同时改包和 Starter 时，把依赖切到同级目录 `../nova-admin` 的软链，改包即时生效：
+## 本地开发（Sail）
 
 ```bash
-composer dev:link      # 加 path 仓库并 update，vendor/inova/nova-admin -> ../nova-admin
-composer dev:unlink    # 包发版后切回正式版本；提交前必须 unlink
+alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'   # 建议加进 ~/.bashrc
+
+sail up -d / sail down          # 启停（down -v 连数据卷一起删）
+sail artisan test               # 测试
+sail npm run dev                # Vite 热更新
+sail --profile queue up -d      # 需要时加队列 worker（scheduled 同理）
 ```
 
-`dev:link` 把本地包的版本号声明为 `2.0.0` 以满足 `^2.0`，包升大版本时同步改脚本里的版本号。
-软链指向项目目录之外，Sail 容器内访问不到，联调时用宿主机的 `php artisan test` / `php artisan serve`。
+**init.sh**：`./init.sh [项目名] [--reset]`，项目名默认取目录名，`--reset` 会删数据卷重来。
 
-## 本地 Docker 开发（Laravel Sail）
+- `.env` 由 `.env.example` 生成并补上 Sail 专属键（端口、`DB_HOST=mysql`、账号等），**绝不静默覆盖**：
+  已有 `.env` 不含 `APP_PORT` 时先备份成 `.env.bak.*` 再生成（`create-project` 的新项目走这条，正常）；
+  含 `APP_PORT` 则保留。
+- 端口自动避让：`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` 被别的进程或项目占用就往后挪，
+  `APP_URL` 同步。要手工指定改 `.env`，改 `compose.yaml` 无效。端口只绑 `127.0.0.1`。
 
-要求：Docker Desktop（WSL2）或 Docker Engine 与 Docker Compose。
+**数据库**：容器内 `mysql:3306`；宿主机 `mysql -h 127.0.0.1 -P ${FORWARD_DB_PORT} -u sail -psail ${DB_DATABASE}`。
 
-把 alias 加进 shell 配置文件（如 `~/.bashrc`）会方便很多：
+**排障**：`.env` 含空格的值要加引号，否则容器反复重启、返回 503；改 `.env` 后 `sail restart laravel.test`；
+卡在「等待 MySQL 就绪」且容器 PORTS 列没有 `127.0.0.1:xxxx->` 映射，`sail down -v` 后重跑 `init.sh`。
 
-```bash
-alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'
-```
+## 生产部署（LNMP）
 
-### init.sh 做了什么
-
-```bash
-./init.sh                  # 项目名取当前目录名
-./init.sh MyNewSite        # 显式指定：容器前缀 mynewsite，数据库 mynewsite
-./init.sh myhub --reset    # 推倒重来（会删除数据卷！）
-```
-
-依次完成：装依赖 → 生成 `.env` → 前端构建 → 探测端口 → 起容器 → 迁移 + 填充。
-
-关于 `.env`，它**绝不静默覆盖已有配置**，三条分支：
-
-| `.env` 状态 | 行为 |
-| --- | --- |
-| 不存在 | 用 `.env.docker.example` 生成 |
-| 存在但不含 `APP_PORT` | 备份为 `.env.bak.<时间戳>` 后重新生成，并提示自行迁移自定义配置 |
-| 存在且含 `APP_PORT` | 保留，只在端口冲突时改写端口相关键 |
-
-`composer create-project` 会先用 `.env.example` 造一个 `.env`，它不含 Docker 端口键，
-所以新项目走的是中间那条分支——留下一个 `.env.bak.*` 是正常的，已在 `.gitignore` 里。
-
-项目名参数影响 `COMPOSE_PROJECT_NAME`（转小写）、`APP_NAME`、`DB_DATABASE`（转小写，`-` 换 `_`），
-且只在生成 `.env` 时写入。`--reset` 是第二个位置参数，单独传 `./init.sh --reset` 会被当成项目名。
-
-### 端口
-
-`.env.docker.example` 的默认值是 HTTP `8014`、Vite `5187`、MySQL `33075`，
-但本机多个 Starter 项目并存时几乎必然撞车，所以 `init.sh` 在 `sail up` **之前**先探测：
-
-- 端口被别的进程或别的项目容器占着 → 自动往后找空闲端口，改写 `.env`，`APP_URL` 跟着同步
-- 端口被本项目自己的容器占着 → 视为正常，重复执行 `init.sh` 不会导致端口漂移
-
-所有端口只绑定 `127.0.0.1`，不对外暴露。要手工指定就改 `.env` 里的
-`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT`——**改 `compose.yaml` 无效**，
-里面的 `${APP_PORT:-8014}` 只是 `.env` 缺键时的兜底默认值。
-
-实际地址以 `init.sh` 结尾打印的为准：应用 `http://127.0.0.1:${APP_PORT}`，
-后台入口 `http://127.0.0.1:${APP_PORT}/admin/login`。
-本地后台账号固定 `nova` / `nova`，这是开发环境约定，不需要另建管理员。
-
-### 常用命令
-
-```bash
-sail up -d          # 启动
-sail down           # 停止（保留数据）
-sail down -v        # 停止并删除数据卷
-sail ps             # 查看容器
-sail logs -f        # 跟踪日志
-sail artisan migrate
-sail artisan test
-sail artisan tinker
-sail npm run dev    # Vite 热更新（需与 .env 的 VITE_PORT 一致）
-```
-
-### 可选服务（profile）
-
-默认只起 `laravel.test` + `mysql`。队列和调度器按需启动：
-
-```bash
-sail --profile queue up -d       # 加 queue:work
-sail --profile scheduled up -d   # 加 schedule:work
-```
-
-### 连接数据库
-
-容器内用 `mysql:3306`；宿主机 GUI 工具或命令行用 `127.0.0.1:${FORWARD_DB_PORT}`：
-
-```bash
-mysql -h 127.0.0.1 -P ${FORWARD_DB_PORT} -u sail -psail ${DB_DATABASE}
-```
-
-### 注意
-
-- `.env` 中含空格的值必须加引号（例如 `APP_NAME="Nova Starter"`），
-  否则容器会因 dotenv 解析失败反复重启并返回 503。
-- 改完 `.env` 后需 `sail restart laravel.test` 才生效。
-- 若卡在「等待 MySQL 就绪」，先看容器的 PORTS 一列有没有 `127.0.0.1:xxxx->` 映射；
-  没有说明端口绑定失败、容器是半成品，`sail down -v` 后重跑 `init.sh` 即可。
-
-## 传统 LNMP 部署
-
-生产服务器不要使用 `.env.docker.example` 或 `compose.yaml`：
+不使用 `compose.yaml` 与 `init.sh`：
 
 ```bash
 composer install --no-dev --optimize-autoloader
-cp .env.example .env
-# 填写生产域名、APP_KEY、数据库、缓存、邮件和队列配置
+cp .env.example .env    # 填域名、APP_KEY、数据库等；APP_ENV=production、APP_DEBUG=false
 php artisan key:generate
 php artisan migrate --force
-php artisan nova-admin:create-admin
+php artisan nova-admin:create-admin    # 用 NOVA_ADMIN_NAME / EMAIL / PASSWORD 覆盖默认凭据
 php artisan optimize
 ```
 
-生产 `.env` 应设置 `APP_ENV=production`、`APP_DEBUG=false`，将 `DB_HOST` 配置为实际数据库地址，并通过 `NOVA_ADMIN_NAME`、`NOVA_ADMIN_EMAIL`、`NOVA_ADMIN_PASSWORD` 覆盖默认管理员凭据。由 Supervisor 运行 `php artisan queue:work`，由 crontab 或 Supervisor 运行 `php artisan schedule:work`。
+Supervisor 跑 `php artisan queue:work`，crontab 或 Supervisor 跑 `php artisan schedule:work`。
 
-## 环境文件约定
+## 维护 Starter
 
-- `.env.example`：非 Docker 的本地开发配置模板；生产部署时以实际生产参数覆盖。
-- `.env.docker.example`：Sail 本地 Docker 配置模板。
-- `.env`：当前运行环境配置，不提交。
-
-不要在应用业务代码中直接使用 `env()`；配置值应通过 `config()` 读取。
+- **来源**：`laravel new` + `composer require inova/nova-admin` + `php artisan nova-admin:install` + 前台骨架
+  （`resources/`、`routes/public.php`、`bootstrap/app.php` 的 nova.public 路由组、`.env.example`、`init.sh`、`AGENTS.md`）。
+  Laravel 升大版本时按此重新生成，再把前台骨架拷回来。
+- **发版**：`composer create-project` 取 Packagist 最新 tag，Starter 有改动就打 tag（主版本号与 nova-admin 对齐），记入 `CHANGELOG.md`。
+- **联调 nova-admin**：`composer dev:link` 把依赖切到同级 `../nova-admin` 的软链（本地包声明为 `2.99.99` 以满足 `^2.x`），
+  改包即时生效；包发版后 `composer dev:unlink` 切回，**提交前必须 unlink**。软链在 Sail 容器内不可见，联调用宿主机 `php artisan test`。

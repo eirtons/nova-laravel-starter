@@ -2,20 +2,19 @@
     首页（路由 home）—— 同时是「页面级广告位怎么投放」的参照样板。
 
     投放方式：head 侧用 @push('ad-head') 追加，body 侧在内容里的实际展示位置写。
-    两侧的 position 必须一一对应，AdTemplateContractTest 会守住这条。
+    两侧的 position 必须一一对应，nova-admin:doctor（AdTemplateContractTest）会守住这条。
+    首页不写 @section('title')：标题自动取「站点名 - 副标题」。
     换成真实首页时改 content 里的内容即可，广告位保持原样。
 --}}
 @extends('layouts.app')
 
-@section('description', site_config('site_description', config('nova-admin.static_pages.site_description')))
-
 @section('content')
     <section class="max-w-2xl">
         <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-            {{ site_config('site_name', config('app.name')) }}
+            {{ site_setting('site_name') }}
         </h1>
         <p class="mt-4 text-base leading-7 text-neutral-600">
-            {{ site_config('site_description', config('nova-admin.static_pages.site_description')) }}
+            {{ site_setting('subtitle') }}
         </p>
         {{-- CTA 指向站内静态页；后台入口是 /admin，不要挂在首页上让爬虫顺藤摸瓜 --}}
         <div class="mt-6 flex flex-wrap gap-3">

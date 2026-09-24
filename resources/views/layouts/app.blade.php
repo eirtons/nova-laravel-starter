@@ -12,6 +12,9 @@
          不要靠删模板来关广告。
     AdTemplateContractTest 与 php artisan nova-admin:doctor 守着第 3 条。
 
+    SEO：<x-nova-seo /> 按后台「站点设置」输出 title / description / canonical / favicon / OG，
+    页面只写 @section('title', '页面标题')，站点名由标题模板拼上；description、canonical、og_image 同理可覆盖。
+
     禁广告的栏目（如医疗急救类）用 $section->ads_enabled 整支关掉；
     $section 缺失的页面（首页、工具页）默认允许。注意 starter 未自带 Section 模型，
     有栏目级开关需求的项目要自己建模并向视图传 $section。
@@ -21,10 +24,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', site_config('site_name', config('app.name')))</title>
-    @hasSection('description')
-        <meta name="description" content="@yield('description')">
-    @endif
+    <x-nova-seo />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -42,7 +42,11 @@
     <header class="border-b border-neutral-200">
         <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:h-16 sm:px-6">
             <a href="{{ url('/') }}" class="text-base font-semibold tracking-tight text-neutral-900 hover:text-neutral-600">
-                {{ site_config('site_name', config('app.name')) }}
+                @if ($logo = site_media_url('logo_path'))
+                    <img src="{{ $logo }}" alt="{{ site_setting('site_name') }}" class="h-8 w-auto">
+                @else
+                    {{ site_setting('site_name') }}
+                @endif
             </a>
             {{-- 栏目导航：新项目在此加自己的入口 --}}
             <nav class="flex items-center gap-5 text-sm text-neutral-600"></nav>
@@ -63,9 +67,7 @@
                     @endforeach
                 </nav>
             @endif
-            <p class="mt-6 text-xs text-neutral-500">
-                &copy; {{ date('Y') }} {{ site_config('site_name', config('app.name')) }}
-            </p>
+            <p class="mt-6 text-xs text-neutral-500">{{ site_setting('copyright') }}</p>
         </div>
     </footer>
 </body>

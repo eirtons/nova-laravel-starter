@@ -19,9 +19,9 @@
 
 四条硬约定：
 
-1. **head 与 body 必须成对**
+1. **head 与 body 必须成对，position 写字面量**
    每个投了 `<x-ad-head position="X">` 的页面，必须有对应的 `<x-ad-body position="X">`。
-   缺一半不会报错，只是广告永远不展示。`AdTemplateContractTest` 守着这条。
+   缺一半不会报错，只是广告永远不展示。`nova-admin:doctor`（`AdTemplateContractTest` 调用它）守着这条。
 
 2. **`global_head` 排在所有广告位之后**
    GPT 要求 slot 定义早于 `enableServices`，顺序错了整页广告失效。
@@ -85,8 +85,13 @@
 
 - **面向英文用户**：所有前台可见文案一律英文（`APP_LOCALE=en`）。代码注释用中文。
   后台是中文，别混淆两者。
-- **布局** `resources/views/layouts/app.blade.php` 是所有前台页的唯一骨架，
-  页眉页脚在此。页脚法务链接按 `is_active` 从库里取，不要硬编码 slug。
+- **布局** `resources/views/layouts/app.blade.php` 是所有前台页的唯一骨架，页眉页脚在此。
+  页脚法务链接用包注入的 `$footerPages`（按启用状态），不要硬编码 slug。
+- **SEO 由 `<x-nova-seo />` 统一输出**（title / description / keywords / canonical / favicon / OG），
+  数据来自后台「站点设置」。页面只写 `@section('title', '页面标题')`，站点名由标题模板拼上，
+  不要在页面里手写 `<title>` 或 meta；需要时再写 `@section('description' | 'canonical' | 'og_image')`。
+  首页不写 title，自动取「站点名 - 副标题」。
+- **读站点设置用 `site_setting('key')`**（未保存时回退默认值），媒体用 `site_media_url('logo_path')`。
 - **页眉不用 `sticky`**：顶部 anchor 广告同样固定在视口顶端，两者会互相遮挡。
 - **移动端页眉高度控制在 56–64px**，别把首屏广告挤出视口。
 - **500 页不继承布局**（`resources/views/errors/500.blade.php`）：
@@ -98,20 +103,17 @@
 
 ## 三、环境与配置
 
-- **两份 env 模板必须同步**：`.env.example`（LNMP/生产）与 `.env.docker.example`（Sail）。
-  `init.sh` 用的是后者，只改前者等于没改。`EnvTemplateContractTest` 比对键集合，
-  值可以不同（端口、库名、主机名本就该不同）。Docker 专属键写进该测试的白名单。
+- **env 模板只有 `.env.example` 一份**：新增键只加这里；Sail 专属键由 `init.sh` 生成 `.env` 时补上。
+- **`config/nova-admin.php` 只写与包默认不同的部分**（合并规则见文件头），包新增配置升级后自动继承。
 - **业务代码不直接用 `env()`**，一律走 `config()`。
-- 新项目起步：`./init.sh <项目名>`，它会处理依赖、`.env`、前端构建、起容器、迁移与填充。
 - 本地后台账号固定 `nova` / `nova`，这是开发环境约定，不用另建管理员。
 
 ---
 
 ## 四、改动前后
 
-- 动模板、配置或 env 之前，先看 `tests/Feature/` 下的契约测试守着什么：
-  `AdTemplateContractTest`（模板侧）、`EnvTemplateContractTest`（env 侧）；配置侧由 nova-admin 包自己的测试守着。
-  **它们变红是设计意图，不是障碍** —— 不要为了让测试通过而放宽断言。
+- `sail artisan test` 必须全绿：`AdTemplateContractTest` 跑 `nova-admin:doctor`（广告配置与模板契约），
+  `FrontendSmokeTest` 渲染首页与 404。**变红是设计意图，不是障碍** —— 不要为了让测试通过而放宽断言。
 - 改了 Blade 或 Tailwind 类名后需要 `npm run build`（或 `sail npm run dev`），否则样式不生效。
 - 验广告位排布：`sail artisan ad:seed` 填测试广告，看完 `sail artisan ad:seed --off` 关掉。
 - 配置一致性与模板渲染点自检：`sail artisan nova-admin:doctor`（CI 可加 `--strict`，未放置的内容位也判失败）。
