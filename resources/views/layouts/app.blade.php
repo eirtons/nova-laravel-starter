@@ -2,14 +2,15 @@
     前台基础布局 —— 同时是 nova-admin 广告契约的参照样板。
 
     契约（详见 vendor/inova/nova-admin/README.md）：
-      1. 每个广告位的 <x-ad-head> 与 <x-ad-body> 必须成对出现；协议下发时
-         head_code 与 body_code 一起给，少一半就会被静默吞掉。
-      2. global_head 必须排在所有广告位之后：GPT 要求 slot 定义早于 enableServices。
-      3. 浮层位（anchor / interstitial）自己 position:fixed，body 侧必须 :wrapper="false"，
-         套居中容器会破坏布局。
-      4. 没填代码的位不产生任何 DOM（shouldRender() 返回 false），所以渲染点全都留着，
-         展示与否交给后台 / 下发协议决定，不要靠删模板来关广告。
-    AdTemplateContractTest 守着第 1 条，其余靠这份样板。
+      1. 布局级位（anchor / interstitial 等浮层、脚本类，以及 global_head）由
+         <x-ad-layout-head /> 与 <x-ad-layout-body /> 统一输出：global_head 固定最后、
+         浮层不套容器，nova-admin 新增此类位后升级即生效，不用改这里。
+      2. 页面的 @stack('ad-head') 必须写在 <x-ad-layout-head /> 之前：
+         GPT 要求 slot 定义早于 global_head 里的 enableServices。
+      3. 内容位（banner）由页面模板放置，<x-ad-head> 与 <x-ad-body> 必须成对。
+      4. 没填代码的位不产生任何 DOM，渲染点全都留着，展示与否交给后台 / 下发协议决定，
+         不要靠删模板来关广告。
+    AdTemplateContractTest 与 php artisan nova-admin:doctor 守着第 3 条。
 
     禁广告的栏目（如医疗急救类）用 $section->ads_enabled 整支关掉；
     $section 缺失的页面（首页、工具页）默认允许。注意 starter 未自带 Section 模型，
@@ -27,21 +28,14 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    @if (($section ?? null)?->ads_enabled ?? true)
-        <x-ad-head position="anchor" />
-        <x-ad-head position="interstitial" />
-    @endif
     {{-- 各页面用 @push('ad-head') 追加自己的广告位（如 home_banner1、detail_banner1） --}}
     @stack('ad-head')
-    <x-ad-head position="global_head" />
+    {{-- enabled=false 时只输出 global_head：统计、站点验证这类站点级脚本任何页面都要加载 --}}
+    <x-ad-layout-head :enabled="($section ?? null)?->ads_enabled ?? true" />
     @stack('head')
 </head>
 <body class="flex min-h-screen flex-col bg-white font-sans text-neutral-900 antialiased">
-    @if (($section ?? null)?->ads_enabled ?? true)
-        <x-ad-body position="anchor" :wrapper="false" />
-        <x-ad-body position="interstitial" :wrapper="false" />
-    @endif
-    <x-ad-body position="global_head" :wrapper="false" />
+    <x-ad-layout-body :enabled="($section ?? null)?->ads_enabled ?? true" />
 
     {{-- 页眉：移动端高度控制在 56~64px，别把首屏广告挤出视口。
          刻意不用 sticky —— 顶部 anchor 广告同样固定在视口顶端，两者会互相遮挡。 --}}

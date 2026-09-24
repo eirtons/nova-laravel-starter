@@ -7,13 +7,12 @@ use Tests\TestCase;
 class AdTemplateContractTest extends TestCase
 {
     /**
-     * 模板侧的广告契约。AdContractTest 守的是配置侧（协议映射 → 启用的位），
-     * 这里守的是模板侧：后台填了代码、协议也下发了，模板漏投一半照样不展示。
+     * 模板侧的广告契约（配置侧由 nova-admin 包自己的测试守着）：
+     * 后台填了代码、协议也下发了，模板漏投一半照样不展示。
      *
-     * 判定按单个 blade 文件做：布局里 anchor / interstitial / global_head 的
-     * head 与 body 本来就同文件；页面则是 @push('ad-head') 与 @section('content')
-     * 同文件。所以「同文件内成对」就等价于「同页面内成对」，不必去解析
-     * @extends / @push 的跨文件关系。
+     * 布局级位由 <x-ad-layout-head/body /> 输出，不在此列。判定按单个 blade 文件做：
+     * 页面的 @push('ad-head') 与 @section('content') 同文件，所以「同文件内成对」
+     * 就等价于「同页面内成对」，不必去解析 @extends / @push 的跨文件关系。
      */
     private const HEAD = 'ad-head';
 

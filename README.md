@@ -7,6 +7,14 @@
 **项目约定见 [AGENTS.md](AGENTS.md)**（`CLAUDE.md` 是它的软链）。广告契约、前台文案语言、
 env 双模板同步等规则都在那里，动模板和配置前先读。
 
+## 与 nova-admin 的分工
+
+`inova/nova-admin` 是底层核心库：后台功能、广告与站点配置、前台缓存（`nova.public`）、HSTS、
+页脚静态页注入、配置默认值都在包里。**所有站点通用的改动都改包、发版，项目 `composer update` 即得**，
+不要在项目里复制一份。本 Starter 只保留每站都要改的前台骨架：布局、页面模板、路由、env、init.sh。
+
+`config/nova-admin.php` 只写与包默认不同的部分（合并规则见文件头注释），包新增的广告位等配置升级后自动继承。
+
 ## 基于 Starter 开新项目
 
 ```bash
@@ -21,16 +29,16 @@ cd myhub
 起来之后按这个顺序做：
 
 1. **先定广告位，再写业务。** 广告位是站点的结构性决定，页面按它排版，不是最后往页面上贴。
-   按站点实际裁剪 `config/nova-admin.php` 的 `ad_positions`，**同步删 `ads_protocol.position_map`
-   里对应的行**（两者必须一致）。改完跑：
+   通用广告位由包提供；本站专属位在 `config/nova-admin.php` 的 `ad_positions` 与
+   `ads_protocol.position_map` 里追加（去掉包内某位写 `false`，两处同步）。改完跑：
 
    ```bash
-   sail artisan nova-admin:doctor    # 配置一致性自检
-   sail artisan test                 # 三个契约测试必须全绿
+   sail artisan nova-admin:doctor    # 配置一致性 + 模板渲染点自检
+   sail artisan test                 # 契约测试必须全绿
    ```
 
-2. **写页面时照 `resources/views/home.blade.php` 抄。** head/body 成对、`global_head` 排最后、
-   浮层位 `:wrapper="false"` —— 细节见 AGENTS.md 的广告契约一节。
+2. **写页面时照 `resources/views/home.blade.php` 抄。** 内容位 head/body 成对；浮层位与
+   `global_head` 由布局里的 `<x-ad-layout-head/body />` 统一输出，不用管 —— 细节见 AGENTS.md 的广告契约一节。
    `sail artisan ad:seed` 可填测试广告肉眼验证排版，看完 `--off` 关掉。
 
 3. **栏目级关广告**按需接入：布局判断的是 `$section->ads_enabled`，鸭子类型，
@@ -43,6 +51,18 @@ cd myhub
    ```
 
    静态页（法务五件套）在后台「静态页面」填，页脚链接自动按启用状态展示。
+
+## 联调 nova-admin
+
+同时改包和 Starter 时，把依赖切到同级目录 `../nova-admin` 的软链，改包即时生效：
+
+```bash
+composer dev:link      # 加 path 仓库并 update，vendor/inova/nova-admin -> ../nova-admin
+composer dev:unlink    # 包发版后切回正式版本；提交前必须 unlink
+```
+
+`dev:link` 把本地包的版本号声明为 `2.0.0` 以满足 `^2.0`，包升大版本时同步改脚本里的版本号。
+软链指向项目目录之外，Sail 容器内访问不到，联调时用宿主机的 `php artisan test` / `php artisan serve`。
 
 ## 本地 Docker 开发（Laravel Sail）
 

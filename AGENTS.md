@@ -9,8 +9,15 @@
 
 ## 一、广告契约（最高优先级）
 
-广告位在 `config/nova-admin.php` 的 `ad_positions` 中枚举，代码由后台或 webdeploy 协议下发，
-模板只负责**留出渲染点**。四条硬约定：
+通用广告位由 `inova/nova-admin` 包枚举，本站专属位在 `config/nova-admin.php` 的 `ad_positions`
+里追加；代码由后台或 webdeploy 协议下发，模板只负责**留出渲染点**。
+
+广告位分两类：
+- **布局级位**（anchor / interstitial 等浮层、脚本类，加上 `global_head`）：由布局里的
+  `<x-ad-layout-head />` 与 `<x-ad-layout-body />` 统一输出，包新增此类位后升级即生效，不用改模板。
+- **内容位**（banner）：各页面模板自行放置。
+
+四条硬约定：
 
 1. **head 与 body 必须成对**
    每个投了 `<x-ad-head position="X">` 的页面，必须有对应的 `<x-ad-body position="X">`。
@@ -18,9 +25,10 @@
 
 2. **`global_head` 排在所有广告位之后**
    GPT 要求 slot 定义早于 `enableServices`，顺序错了整页广告失效。
+   布局组件已保证 `global_head` 最后；布局里 `@stack('ad-head')` 必须写在 `<x-ad-layout-head />` 之前。
 
-3. **浮层位（`anchor` / `interstitial`）必须 `:wrapper="false"`**
-   它们自己 `position:fixed`，套上居中容器会破坏布局。
+3. **浮层位交给布局组件，不要在页面里手写**
+   它们自己 `position:fixed`，布局组件输出时不套居中容器；手写容易套上容器破坏布局。
 
 4. **不要靠删模板来关广告**
    没填代码的位不产生任何 DOM（`shouldRender()` 返回 false）。渲染点一律保留，
@@ -31,17 +39,14 @@
 布局里是鸭子类型判断，**不需要任何特定模型**：
 
 ```blade
-@if (($section ?? null)?->ads_enabled ?? true)
-    <x-ad-head position="anchor" />
-    <x-ad-body position="anchor" :wrapper="false" />
-@endif
-<x-ad-head position="global_head" />   {{-- 不受开关影响，始终加载 --}}
+<x-ad-layout-head :enabled="($section ?? null)?->ads_enabled ?? true" />
+<x-ad-layout-body :enabled="($section ?? null)?->ads_enabled ?? true" />
 ```
 
 任何带 `ads_enabled` 属性的对象都能接入：栏目模型加个字段即可；一次性场景直接
-`(object) ['ads_enabled' => false]`（静态页和 404 页就是这么做的，见 `AppServiceProvider`）。
+`(object) ['ads_enabled' => false]`（静态页和 404 页由 nova-admin 按 `ad_disabled_views` 注入）。
 
-`global_head` 刻意放在 `@if` 之外 —— 统计、站点验证这类站点级脚本任何页面都要加载。
+`enabled=false` 时组件仍输出 `global_head` —— 统计、站点验证这类站点级脚本任何页面都要加载。
 
 ### 哪些页面不投广告
 
@@ -72,7 +77,7 @@
 ```
 
 `resources/views/home.blade.php` 是可运行的参照。改广告位枚举时，
-`ad_positions` 与 `ads_protocol.position_map` 必须同步增删，`AdContractTest` 守着这条。
+`ad_positions` 与 `ads_protocol.position_map` 必须同步增删，`nova-admin:doctor` 守着这条。
 
 ---
 
@@ -104,20 +109,21 @@
 
 ## 四、改动前后
 
-- 动模板、配置或 env 之前，先看 `tests/Feature/` 下的三个契约测试守着什么：
-  `AdContractTest`（配置侧）、`AdTemplateContractTest`（模板侧）、`EnvTemplateContractTest`（env 侧）。
+- 动模板、配置或 env 之前，先看 `tests/Feature/` 下的契约测试守着什么：
+  `AdTemplateContractTest`（模板侧）、`EnvTemplateContractTest`（env 侧）；配置侧由 nova-admin 包自己的测试守着。
   **它们变红是设计意图，不是障碍** —— 不要为了让测试通过而放宽断言。
 - 改了 Blade 或 Tailwind 类名后需要 `npm run build`（或 `sail npm run dev`），否则样式不生效。
 - 验广告位排布：`sail artisan ad:seed` 填测试广告，看完 `sail artisan ad:seed --off` 关掉。
-- 配置一致性自检：`sail artisan nova-admin:doctor`。
+- 配置一致性与模板渲染点自检：`sail artisan nova-admin:doctor`（CI 可加 `--strict`，未放置的内容位也判失败）。
+- 所有站点通用的逻辑改 nova-admin 包、发版后 `composer update`，不要在项目里复制；联调用 `composer dev:link`。
 
 ---
 
 ## 五、别做这些
 
 - 不要为了「页面太朴素」重写 `layouts/app.blade.php` 的广告渲染点或调整其顺序。
-- 不要删 `ad_positions` 里暂时没用上的位（如详情页位），留着备用；
-  真要删必须同步删 `position_map`。
+- 不要去掉暂时没用上的位（如详情页位），留着备用：去掉后平台一勾到它，整批导入失败。
+  真要去掉，在 `ad_positions` 与 `position_map` 里都写 `false`。
 - 不要给静态页、错误页加广告位。
 - 不要在前台文案里写中文。
 - 不要提交 `.env`、密钥或测试数据。
