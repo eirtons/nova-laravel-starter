@@ -38,9 +38,10 @@ sail --profile queue up -d      # 需要时加队列 worker（scheduled 同理�
 
 **init.sh**：`./init.sh [项目名] [--reset]`，项目名默认取目录名，`--reset` 会删数据卷重来。
 
-- `.env` 由 `.env.example` 生成并补上 Sail 专属键（端口、`DB_HOST=mysql`、账号等），**绝不静默覆盖**：
-  已有 `.env` 不含 `APP_PORT` 时先备份成 `.env.bak.*` 再生成（`create-project` 的新项目走这条，正常）；
-  含 `APP_PORT` 则保留。
+- `.env.example` 是唯一模板：主体按生产（LNMP）写，末尾「Docker（Sail）本地开发」区在模板里是注释。
+  init.sh 生成 `.env` 时把该区取消注释并填好（项目名、端口、uid/gid），同时把 `APP_NAME`、`APP_URL`、
+  `DB_HOST=mysql`、`DB_DATABASE`、数据库账号改成本地 Sail 的值。**绝不静默覆盖**：
+  没有 `.env` 或是模板副本（含 `create-project`）就地填写；有自定义内容的先备份成 `.env.bak.*`；已启用 Docker 区的保留。
 - 端口自动避让：`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` 被别的进程或项目占用就往后挪，
   `APP_URL` 同步。要手工指定改 `.env`，改 `compose.yaml` 无效。端口只绑 `127.0.0.1`。
 
@@ -51,11 +52,12 @@ sail --profile queue up -d      # 需要时加队列 worker（scheduled 同理�
 
 ## 生产部署（LNMP）
 
-不使用 `compose.yaml` 与 `init.sh`：
+不使用 `compose.yaml` 与 `init.sh`，直接复制模板（末尾 Docker 区是注释，不用管）。
+webdeploy 部署会自动复制并覆盖 `DB_*`、`APP_NAME`、`APP_URL`、`APP_ENV`、`APP_DEBUG`；手动部署：
 
 ```bash
 composer install --no-dev --optimize-autoloader
-cp .env.example .env    # 填域名、APP_KEY、数据库等；APP_ENV=production、APP_DEBUG=false
+cp .env.example .env    # 填域名、数据库等；APP_ENV=production、APP_DEBUG=false
 php artisan key:generate
 php artisan migrate --force
 php artisan nova-admin:create-admin    # 用 NOVA_ADMIN_NAME / EMAIL / PASSWORD 覆盖默认凭据

@@ -106,8 +106,15 @@ next_free_port() {
     echo "$port"
 }
 
-# 3. 生成 .env 文件（绝不静默覆盖已有配置）
-# 只维护一份模板 .env.example（也是 LNMP 生产用的），Sail 专属的键在这里补上或改写。
+# 3. 准备 .env（绝不静默覆盖已有配置）
+# .env.example 是唯一模板，主体按生产（LNMP）写，生产直接 cp 使用；
+# 末尾「Docker（Sail）本地开发」区在模板里是注释，这里在 .env 中取消注释并填好。
+DOCKER_SECTION='# ---- Docker（Sail）本地开发 ----'
+
+get_env() {
+    grep -E "^$1=" .env | tail -1 | cut -d= -f2-
+}
+
 set_env() {
     if grep -qE "^$1=" .env; then
         sed "${SED_INPLACE[@]}" "s#^$1=.*#$1=$2#" .env
@@ -116,46 +123,58 @@ set_env() {
     fi
 }
 
-generate_env() {
-    cp .env.example .env
+# 让 .env 带上生效的 Docker 区：有注释版（来自模板）就地取消注释，没有就从模板补一份
+enable_docker_section() {
+    if ! grep -qxF "$DOCKER_SECTION" .env; then
+        printf '\n' >> .env
+        sed -n "/^$DOCKER_SECTION\$/,\$p" .env.example >> .env
+    fi
+    sed -E "${SED_INPLACE[@]}" "/^$DOCKER_SECTION\$/,\$ s/^# ?([A-Z_]+=)/\1/" .env
+}
 
-    # 新项目直接挑空闲端口，免得跟已在跑的其他 Starter 项目撞。
-    NEW_APP_PORT="$(next_free_port 8014)"
-    NEW_VITE_PORT="$(next_free_port 5187)"
-    NEW_DB_PORT="$(next_free_port 33075)"
+fill_env() {
+    enable_docker_section
 
-    printf '\n# Sail（init.sh 生成）\n' >> .env
+    # 挑空闲端口，免得跟已在跑的其他 Starter 项目撞
+    NEW_APP_PORT="$(next_free_port "$(get_env APP_PORT)")"
+    NEW_VITE_PORT="$(next_free_port "$(get_env VITE_PORT)")"
+    NEW_DB_PORT="$(next_free_port "$(get_env FORWARD_DB_PORT)")"
+
     set_env COMPOSE_PROJECT_NAME "$DOCKER_PROJECT_NAME"
-    set_env APP_NAME "$PROJECT_NAME"
-    # APP_URL 必须跟着 APP_PORT 走，否则站内生成的链接全指向旧端口。
-    set_env APP_URL "http://127.0.0.1:$NEW_APP_PORT"
     set_env APP_PORT "$NEW_APP_PORT"
     set_env VITE_PORT "$NEW_VITE_PORT"
     set_env FORWARD_DB_PORT "$NEW_DB_PORT"
     set_env WWWUSER "$(id -u)"
     set_env WWWGROUP "$(id -g)"
+    # 主体里的应用配置改成本地 Sail 的值；APP_URL 必须跟着 APP_PORT 走
+    set_env APP_NAME "$PROJECT_NAME"
+    set_env APP_URL "http://127.0.0.1:$NEW_APP_PORT"
     set_env DB_HOST mysql
     set_env DB_DATABASE "$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
     set_env DB_USERNAME sail
     set_env DB_PASSWORD sail
-    set_env DB_ROOT_PASSWORD root_password
 
-    echo "✅ .env 文件已生成（项目名: $PROJECT_NAME，端口: $NEW_APP_PORT / $NEW_VITE_PORT / $NEW_DB_PORT）"
+    echo "✅ .env 已按本项目填写（项目名: $PROJECT_NAME，端口: $NEW_APP_PORT / $NEW_VITE_PORT / $NEW_DB_PORT）"
 }
 
+echo ""
 if [ ! -f ".env" ]; then
-    echo ""
-    echo "📝 由 .env.example 生成 Sail 用的 .env..."
-    generate_env
-elif ! grep -q '^APP_PORT=' .env; then
-    ENV_BACKUP=".env.bak.$(date +%Y%m%d%H%M%S)"
-    echo ""
-    echo "📝 现有 .env 不含 Docker 端口配置，重新生成 Sail 用的 .env..."
-    cp .env "$ENV_BACKUP"
-    generate_env
-    echo "⚠️  原 .env 已备份为 $ENV_BACKUP，请自行迁移其中的自定义配置"
+    echo "📝 由 .env.example 生成 .env..."
+    cp .env.example .env
+    fill_env
+elif [ -n "$(get_env COMPOSE_PROJECT_NAME || true)" ]; then
+    echo "⏭️  已存在配置好的 .env，保留现有配置"
+elif diff -q <(grep -v '^APP_KEY=' .env) <(grep -v '^APP_KEY=' .env.example) >/dev/null; then
+    # 与模板一致（仅 APP_KEY 不同），如 composer create-project 刚复制出来的：就地填写，保留 APP_KEY
+    echo "📝 .env 为模板副本，就地填写..."
+    fill_env
 else
-    echo "⏭️  已存在 Docker .env，保留现有配置"
+    # 有自定义内容的非 Docker .env：备份后再改，其余配置原样保留
+    ENV_BACKUP=".env.bak.$(date +%Y%m%d%H%M%S)"
+    cp .env "$ENV_BACKUP"
+    echo "📝 现有 .env 未启用 Docker 区，补上并填写..."
+    fill_env
+    echo "⚠️  原 .env 已备份为 $ENV_BACKUP（APP_URL、DB_HOST 与数据库账号已改为本地 Sail 的值）"
 fi
 
 # 读取端口配置，供后续提示使用

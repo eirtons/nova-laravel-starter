@@ -3,6 +3,14 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.1.2] - 2026-09-23
+
+- `.env.example` 末尾的「Docker（Sail）本地开发」区改为固定格式（仍是注释，生产直接 `cp` 不受影响）；
+  `init.sh` 生成 `.env` 时在同一区取消注释并填写，两边位置、格式一致，方便对照
+- `init.sh` 就地填写：模板副本（含 `create-project`）保留已生成的 `APP_KEY`、不再产生 `.env.bak`；
+  有自定义内容的 `.env` 先备份再补 Docker 区；已启用 Docker 区的保留
+- `compose.yaml` 去掉 `name:` 兜底，项目名未设置时取目录名，避免多个项目共用同一组容器
+
 ## [2.1.1] - 2026-09-23
 
 - `.env.example` 末尾以注释列出 Sail 专属键及默认值，说明由 `init.sh` 自动生成（只看模板找不到 Docker 配置）

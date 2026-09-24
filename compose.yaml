@@ -1,5 +1,3 @@
-name: ${COMPOSE_PROJECT_NAME:-nova-laravel-starter}
-
 x-sail-app: &sail-app
   build:
     context: ./vendor/laravel/sail/runtimes/8.2
