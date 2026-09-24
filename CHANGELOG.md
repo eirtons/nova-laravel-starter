@@ -3,6 +3,12 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.1.3] - 2026-09-23
+
+- 安全：`league/commonmark` 2.9.0 → 2.10.3（修复 4 个高危：3 个拒绝服务、1 个 AttributesExtension `on*` 过滤绕过导致的 XSS），
+  依赖 `nette/schema` 随之 v1.3.5 → v1.3.6；`composer audit` 无告警
+- README 发版约定补充：打 tag 前先跑 `composer audit`
+
 ## [2.1.2] - 2026-09-23
 
 - `.env.example` 末尾的「Docker（Sail）本地开发」区改为固定格式（仍是注释，生产直接 `cp` 不受影响）；

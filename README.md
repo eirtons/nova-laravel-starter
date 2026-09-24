@@ -72,5 +72,6 @@ Supervisor 跑 `php artisan queue:work`，crontab 或 Supervisor 跑 `php artisa
   （`resources/`、`routes/public.php`、`bootstrap/app.php` 的 nova.public 路由组、`.env.example`、`init.sh`、`AGENTS.md`）。
   Laravel 升大版本时按此重新生成，再把前台骨架拷回来。
 - **发版**：`composer create-project` 取 Packagist 最新 tag，Starter 有改动就打 tag（主版本号与 nova-admin 对齐），记入 `CHANGELOG.md`。
+  **打 tag 前先跑 `composer audit`**：新项目原样继承本仓库的 `composer.lock`，有漏洞就 `composer update <包> --with-dependencies` 升到修复版。
 - **联调 nova-admin**：`composer dev:link` 把依赖切到同级 `../nova-admin` 的软链（本地包声明为 `2.99.99` 以满足 `^2.x`），
   改包即时生效；包发版后 `composer dev:unlink` 切回，**提交前必须 unlink**。软链在 Sail 容器内不可见，联调用宿主机 `php artisan test`。
