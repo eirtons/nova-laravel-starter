@@ -3,6 +3,10 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.1.1] - 2026-09-23
+
+- `.env.example` 末尾以注释列出 Sail 专属键及默认值，说明由 `init.sh` 自动生成（只看模板找不到 Docker 配置）
+
 ## [2.1.0] - 2026-09-23
 
 - 依赖升至 `inova/nova-admin` ^2.2；布局改用 `<x-nova-seo />`，后台「站点设置」的标题模板、描述、关键词、
