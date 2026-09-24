@@ -2,24 +2,20 @@
 
 namespace App\Models;
 
-
-
-use Filament\Panel;
-use Filament\Models\Contracts\FilamentUser;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Inova\NovaAdmin\Concerns\HasNovaAdminAccess;
 
 class User extends Authenticatable implements FilamentUser
 {
-    
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return $panel->getId() === 'admin' && $this->is_admin;
-    }
-/** @use HasFactory<UserFactory> */
+    // 后台准入（仅 is_admin 用户）由 nova-admin 提供
+    use HasNovaAdminAccess;
+
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**

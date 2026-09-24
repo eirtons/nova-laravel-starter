@@ -52,6 +52,14 @@ cd myhub
 
    静态页（法务五件套）在后台「静态页面」填，页脚链接自动按启用状态展示。
 
+## Starter 的来源与发版
+
+Starter = `laravel new` + `composer require inova/nova-admin` + `php artisan nova-admin:install` + 前台骨架
+（`resources/views`、`routes/public.php`、`bootstrap/app.php` 的 nova.public 路由组、env 模板、`init.sh`、`AGENTS.md`）。
+Laravel 升大版本时按这个顺序重新生成，再把前台骨架拷回来，不必手工比对差异。
+
+`composer create-project` 取 Packagist 上最新 tag：**Starter 有改动就打 tag**（主版本号与 nova-admin 对齐），并记入 `CHANGELOG.md`。
+
 ## 联调 nova-admin
 
 同时改包和 Starter 时，把依赖切到同级目录 `../nova-admin` 的软链，改包即时生效：
