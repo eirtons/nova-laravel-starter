@@ -3,6 +3,11 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.3.0] - 2026-10-08
+
+- `inova/nova-admin` 升至 2.4.0（约束 `^2.4`）：`<x-nova-seo />` 支持页面级 `keywords` / `robots` / `og_type`，
+  补齐 `twitter:title` / `twitter:description` / `twitter:image`；AGENTS.md 同步可覆盖的 section 列表；`composer audit` 无告警
+
 ## [2.2.0] - 2026-10-07
 
 - `inova/nova-admin` 升至 2.3.0：后台改动后自动清 Cloudflare 边缘缓存；`.env.example` 新增 `CLOUDFLARE_API_TOKEN`

@@ -89,7 +89,7 @@
   页脚法务链接用包注入的 `$footerPages`（按启用状态），不要硬编码 slug。
 - **SEO 由 `<x-nova-seo />` 统一输出**（title / description / keywords / canonical / favicon / OG），
   数据来自后台「站点设置」。页面只写 `@section('title', '页面标题')`，站点名由标题模板拼上，
-  不要在页面里手写 `<title>` 或 meta；需要时再写 `@section('description' | 'canonical' | 'og_image')`。
+  不要在页面里手写 `<title>` 或 meta；需要时再写 `@section('description' | 'keywords' | 'canonical' | 'robots' | 'og_type' | 'og_image')`。
   首页不写 title，自动取「站点名 - 副标题」。
 - **读站点设置用 `site_setting('key')`**（未保存时回退默认值），媒体用 `site_media_url('logo_path')`。
 - **页眉不用 `sticky`**：顶部 anchor 广告同样固定在视口顶端，两者会互相遮挡。
