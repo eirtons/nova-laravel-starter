@@ -3,8 +3,11 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
-## [Unreleased]
+## [2.2.0] - 2026-10-07
 
+- `inova/nova-admin` 升至 2.3.0：后台改动后自动清 Cloudflare 边缘缓存；`.env.example` 新增 `CLOUDFLARE_API_TOKEN`
+- 安全：`filament/filament` 5.7.6 → 5.10.1（MFA 管理操作未要求重新验证密码，中危）、`laravel/framework` 12.65.0 → 12.69.3
+  （调试页 XSS，低危）、`league/flysystem` 3.35.2 → 3.36.0（路径控制字符检查绕过，低危），依赖随之升级；`composer audit` 无告警
 - `init.sh` 端口全局统一分配：扫描 `~/project`、`~/project_archive`、`~/novacode` 下其他项目 `.env` 登记的端口，
   取最小空位 n，整组写入 `APP_PORT=8010+n` / `VITE_PORT=5183+n` / `FORWARD_DB_PORT=33071+n`；
   修复只看监听表、把已停容器的端口当空闲导致的重复分配。已有 `.env` 冲突时同样整组顺延
