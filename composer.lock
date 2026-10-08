@@ -2183,16 +2183,16 @@
         },
         {
             "name": "inova/nova-admin",
-            "version": "v2.4.0",
+            "version": "v2.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/eirtons/nova-admin.git",
-                "reference": "1d38e60a9a79400c3b6d360916ac1fdc896f4601"
+                "reference": "33abcb49bce2524186667c7d08a07a333c4ba86e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/eirtons/nova-admin/zipball/1d38e60a9a79400c3b6d360916ac1fdc896f4601",
-                "reference": "1d38e60a9a79400c3b6d360916ac1fdc896f4601",
+                "url": "https://api.github.com/repos/eirtons/nova-admin/zipball/33abcb49bce2524186667c7d08a07a333c4ba86e",
+                "reference": "33abcb49bce2524186667c7d08a07a333c4ba86e",
                 "shasum": ""
             },
             "require": {
@@ -2231,9 +2231,9 @@
             "description": "多站点复用的通用后台底座：广告、站点设置、ads.txt、robots.txt、后台中文、登录与默认管理员（Laravel 12 + Filament 5）。",
             "support": {
                 "issues": "https://github.com/eirtons/nova-admin/issues",
-                "source": "https://github.com/eirtons/nova-admin/tree/v2.4.0"
+                "source": "https://github.com/eirtons/nova-admin/tree/v2.4.2"
             },
-            "time": "2026-10-08T04:57:21+00:00"
+            "time": "2026-10-08T09:39:30+00:00"
         },
         {
             "name": "kirschbaum-development/eloquent-power-joins",

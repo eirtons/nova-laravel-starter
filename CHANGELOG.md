@@ -3,6 +3,11 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.3.1] - 2026-10-08
+
+- `inova/nova-admin` 升至 2.4.2：静态页标题与自动摘要解码 HTML 实体，修复含 `&`、`'` 的页面双重转义；
+  测试广告按 webdeploy 默认尺寸生成（Banner 300×250，Anchor 贴底 320×50，Interstitial 全屏 320×480）；`composer audit` 无告警
+
 ## [2.3.0] - 2026-10-08
 
 - `inova/nova-admin` 升至 2.4.0（约束 `^2.4`）：`<x-nova-seo />` 支持页面级 `keywords` / `robots` / `og_type`，
