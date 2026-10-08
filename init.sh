@@ -98,12 +98,38 @@ port_taken_by_others() {
     return 0
 }
 
-next_free_port() {
-    local port="$1"
-    while port_in_use "$port"; do
-        port=$((port + 1))
+# 端口在 ~/project、~/project_archive（及 ~/novacode 下的 starter 等）全局统一分配：APP=8010+n、VITE=5183+n、DB=33071+n。
+# 只看监听表会把已停容器的端口当成空闲，两个项目同时跑时就撞了，所以还要看其他项目 .env 里登记的端口。
+allocated_app_ports() {
+    local f
+    for f in "$HOME"/project/*/.env "$HOME"/project_archive/*/.env "$HOME"/novacode/*/.env; do
+        [ -f "$f" ] && [ "$(cd "$(dirname "$f")" && pwd)" != "$(pwd)" ] || continue
+        grep -E '^APP_PORT=' "$f" | tail -1 | cut -d= -f2
     done
-    echo "$port"
+}
+
+# 取最小的 n：APP 端口没被其他项目登记，三个端口也都没在监听
+next_port_slot() {
+    local taken n=0
+    taken=" $(allocated_app_ports | tr '\n' ' ') "
+    while [[ "$taken" == *" $((8010 + n)) "* ]] \
+        || port_in_use $((8010 + n)) || port_in_use $((5183 + n)) || port_in_use $((33071 + n)); do
+        n=$((n + 1))
+    done
+    echo "$n"
+}
+
+# 按 next_port_slot 写入一组端口，APP_URL 跟着 APP_PORT 走
+assign_ports() {
+    local n
+    n="$(next_port_slot)"
+    APP_PORT=$((8010 + n))
+    VITE_PORT=$((5183 + n))
+    DB_PORT_HOST=$((33071 + n))
+    set_env APP_PORT "$APP_PORT"
+    set_env VITE_PORT "$VITE_PORT"
+    set_env FORWARD_DB_PORT "$DB_PORT_HOST"
+    set_env APP_URL "http://127.0.0.1:$APP_PORT"
 }
 
 # 3. 准备 .env（绝不静默覆盖已有配置）
@@ -135,26 +161,18 @@ enable_docker_section() {
 fill_env() {
     enable_docker_section
 
-    # 挑空闲端口，免得跟已在跑的其他 Starter 项目撞
-    NEW_APP_PORT="$(next_free_port "$(get_env APP_PORT)")"
-    NEW_VITE_PORT="$(next_free_port "$(get_env VITE_PORT)")"
-    NEW_DB_PORT="$(next_free_port "$(get_env FORWARD_DB_PORT)")"
-
     set_env COMPOSE_PROJECT_NAME "$DOCKER_PROJECT_NAME"
-    set_env APP_PORT "$NEW_APP_PORT"
-    set_env VITE_PORT "$NEW_VITE_PORT"
-    set_env FORWARD_DB_PORT "$NEW_DB_PORT"
+    assign_ports
     set_env WWWUSER "$(id -u)"
     set_env WWWGROUP "$(id -g)"
-    # 主体里的应用配置改成本地 Sail 的值；APP_URL 必须跟着 APP_PORT 走
+    # 主体里的应用配置改成本地 Sail 的值
     set_env APP_NAME "$PROJECT_NAME"
-    set_env APP_URL "http://127.0.0.1:$NEW_APP_PORT"
     set_env DB_HOST mysql
     set_env DB_DATABASE "$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]-' '[:lower:]_')"
     set_env DB_USERNAME sail
     set_env DB_PASSWORD sail
 
-    echo "✅ .env 已按本项目填写（项目名: $PROJECT_NAME，端口: $NEW_APP_PORT / $NEW_VITE_PORT / $NEW_DB_PORT）"
+    echo "✅ .env 已按本项目填写（项目名: $PROJECT_NAME，端口: $APP_PORT / $VITE_PORT / $DB_PORT_HOST）"
 }
 
 echo ""
@@ -182,42 +200,31 @@ APP_PORT="$(grep -E '^APP_PORT=' .env | tail -1 | cut -d= -f2)"
 VITE_PORT="$(grep -E '^VITE_PORT=' .env | tail -1 | cut -d= -f2)"
 DB_PORT_HOST="$(grep -E '^FORWARD_DB_PORT=' .env | tail -1 | cut -d= -f2)"
 DB_DATABASE="$(grep -E '^DB_DATABASE=' .env | tail -1 | cut -d= -f2)"
+DB_USERNAME="$(grep -E '^DB_USERNAME=' .env | tail -1 | cut -d= -f2)"
+DB_PASSWORD="$(grep -E '^DB_PASSWORD=' .env | tail -1 | cut -d= -f2)"
 
 # 3.1 起容器前先判端口。沿用现有 .env 的项目（如从别的项目复制过来的）最容易在这里
 # 撞车：.env 里有 APP_PORT，上面的分支就判定「保留现有配置」，端口冲突被原样留着。
-CONFLICTS=()
-for pair in "APP_PORT:$APP_PORT" "VITE_PORT:$VITE_PORT" "FORWARD_DB_PORT:$DB_PORT_HOST"; do
-    if port_taken_by_others "${pair#*:}"; then
-        CONFLICTS+=("$pair")
-    fi
-done
-
-if [ ${#CONFLICTS[@]} -gt 0 ]; then
-    echo ""
-    echo "🔌 检测到端口冲突，自动改用空闲端口："
-    for pair in "${CONFLICTS[@]}"; do
-        KEY="${pair%%:*}"
+CONFLICT=""
+if [[ " $(allocated_app_ports | tr '\n' ' ') " == *" $APP_PORT "* ]]; then
+    CONFLICT="APP_PORT=$APP_PORT 已登记在其他项目的 .env 里"
+else
+    for pair in "APP_PORT:$APP_PORT" "VITE_PORT:$VITE_PORT" "FORWARD_DB_PORT:$DB_PORT_HOST"; do
         PORT="${pair#*:}"
-        OWNER="$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -F "127.0.0.1:$PORT->" | cut -d' ' -f1)"
-        FREE="$(next_free_port "$PORT")"
-
-        sed "${SED_INPLACE[@]}" "s/^$KEY=.*/$KEY=$FREE/" .env
-        echo "   $KEY: $PORT → $FREE（原端口被 ${OWNER:-非容器进程} 占用）"
-
-        # APP_URL 必须跟着 APP_PORT 走，否则站内生成的链接全指向旧端口。
-        if [ "$KEY" = "APP_PORT" ]; then
-            sed "${SED_INPLACE[@]}" "s#^APP_URL=.*#APP_URL=http://127.0.0.1:$FREE#" .env
-            echo "   APP_URL 已同步为 http://127.0.0.1:$FREE"
-            APP_PORT="$FREE"
-        fi
-        # 同步 shell 变量，后面的连接提示才不会打印出已被改掉的旧端口。
-        if [ "$KEY" = "VITE_PORT" ]; then
-            VITE_PORT="$FREE"
-        elif [ "$KEY" = "FORWARD_DB_PORT" ]; then
-            DB_PORT_HOST="$FREE"
+        if port_taken_by_others "$PORT"; then
+            OWNER="$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -F "127.0.0.1:$PORT->" | cut -d' ' -f1)"
+            CONFLICT="${pair%%:*}=$PORT 被 ${OWNER:-非容器进程} 占用"
+            break
         fi
     done
-    echo "   （端口只在 .env 里配；compose.yaml 的 \${APP_PORT:-8014} 只是兜底默认值，改它无效）"
+fi
+
+if [ -n "$CONFLICT" ]; then
+    echo ""
+    echo "🔌 检测到端口冲突（$CONFLICT），整组改用下一个空闲端口："
+    assign_ports
+    echo "   APP_PORT / VITE_PORT / FORWARD_DB_PORT = $APP_PORT / $VITE_PORT / $DB_PORT_HOST，APP_URL 已同步"
+    echo "   （端口只在 .env 里配；compose.yaml 的 \${APP_PORT:-8010} 只是兜底默认值，改它无效）"
 fi
 
 # 4. 启动 Docker 容器
@@ -280,7 +287,7 @@ echo ""
 echo "🌐 访问地址: http://127.0.0.1:${APP_PORT}"
 echo ""
 echo "🗄️  MySQL 连接（宿主机）:"
-echo "   mysql -h 127.0.0.1 -P ${DB_PORT_HOST} -u sail -psail ${DB_DATABASE}"
+echo "   mysql -h 127.0.0.1 -P ${DB_PORT_HOST} -u ${DB_USERNAME} -p${DB_PASSWORD} ${DB_DATABASE}"
 echo ""
 echo "📋 常用命令:"
 echo "   ./vendor/bin/sail up -d                       # 启动"

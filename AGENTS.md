@@ -109,6 +109,9 @@
 
 - **env 模板只有 `.env.example` 一份，生产直接 `cp` 使用**：主体按生产（LNMP）写，新增应用配置键加在主体。
   Sail 专属键加在末尾「Docker（Sail）本地开发」区且保持注释，由 `init.sh` 在 `.env` 里取消注释并填写。
+- **本地 Docker 端口全局统一分配，不得重复**：`~/project` 与 `~/project_archive` 下所有项目共用一条序列，
+  `APP_PORT=8010+n`、`VITE_PORT=5183+n`、`FORWARD_DB_PORT=33071+n`，从 8010 起连续顺延。`init.sh` 自动取下一个空位；
+  手工改端口时三者同步改，并同步 `APP_URL`、`compose.yaml` 兜底默认值与 README / DOCKER.md 里写死的端口。
 - **`config/nova-admin.php` 只写与包默认不同的部分**（合并规则见文件头），包新增配置升级后自动继承。
 - **业务代码不直接用 `env()`**，一律走 `config()`。
 - 本地后台账号固定 `nova` / `nova`，这是开发环境约定，不用另建管理员。

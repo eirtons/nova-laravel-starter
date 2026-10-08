@@ -3,6 +3,15 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [Unreleased]
+
+- `init.sh` 端口全局统一分配：扫描 `~/project`、`~/project_archive`、`~/novacode` 下其他项目 `.env` 登记的端口，
+  取最小空位 n，整组写入 `APP_PORT=8010+n` / `VITE_PORT=5183+n` / `FORWARD_DB_PORT=33071+n`；
+  修复只看监听表、把已停容器的端口当空闲导致的重复分配。已有 `.env` 冲突时同样整组顺延
+- `init.sh` 结尾 MySQL 连接命令改读 `.env` 中的账号密码
+- `compose.yaml` 兜底端口改为 8010 / 5183 / 33071，MySQL 关闭 `performance_schema` 降低内存占用
+- AGENTS.md 增加全局端口分配约定
+
 ## [2.1.4] - 2026-09-23
 
 - 测试基类调用 `withoutVite()`：`create-project` 后或 CI 里未构建前端时，`FrontendSmokeTest` 不再因缺少 Vite manifest 失败

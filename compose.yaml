@@ -25,14 +25,14 @@ services:
   laravel.test:
     <<: *sail-app
     ports:
-      - "127.0.0.1:${APP_PORT:-8014}:80"
-      - "127.0.0.1:${VITE_PORT:-5187}:${VITE_PORT:-5187}"
+      - "127.0.0.1:${APP_PORT:-8010}:80"
+      - "127.0.0.1:${VITE_PORT:-5183}:${VITE_PORT:-5183}"
     restart: unless-stopped
 
   mysql:
     image: mysql:5.7
     ports:
-      - "127.0.0.1:${FORWARD_DB_PORT:-33075}:3306"
+      - "127.0.0.1:${FORWARD_DB_PORT:-33071}:3306"
     environment:
       TZ: Asia/Shanghai
       MYSQL_DATABASE: "${DB_DATABASE:-nova_laravel_starter}"
@@ -43,6 +43,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --explicit-defaults-for-timestamp=1
+      - --performance-schema=off
     volumes:
       - sail-mysql:/var/lib/mysql
     networks:

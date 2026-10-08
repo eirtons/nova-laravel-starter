@@ -42,10 +42,11 @@ sail --profile queue up -d      # 需要时加队列 worker（scheduled 同理�
   init.sh 生成 `.env` 时把该区取消注释并填好（项目名、端口、uid/gid），同时把 `APP_NAME`、`APP_URL`、
   `DB_HOST=mysql`、`DB_DATABASE`、数据库账号改成本地 Sail 的值。**绝不静默覆盖**：
   没有 `.env` 或是模板副本（含 `create-project`）就地填写；有自定义内容的先备份成 `.env.bak.*`；已启用 Docker 区的保留。
-- 端口自动避让：`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` 被别的进程或项目占用就往后挪，
+- 端口全局统一分配：`APP_PORT` / `VITE_PORT` / `FORWARD_DB_PORT` = `8010+n` / `5183+n` / `33071+n`，
+  n 取 `~/project`、`~/project_archive`、`~/novacode` 下其他项目 `.env` 未登记、且未被监听的最小值；冲突时整组顺延，
   `APP_URL` 同步。要手工指定改 `.env`，改 `compose.yaml` 无效。端口只绑 `127.0.0.1`。
 
-**数据库**：容器内 `mysql:3306`；宿主机 `mysql -h 127.0.0.1 -P ${FORWARD_DB_PORT} -u sail -psail ${DB_DATABASE}`。
+**数据库**：容器内 `mysql:3306`；宿主机 `mysql -h 127.0.0.1 -P ${FORWARD_DB_PORT} -u ${DB_USERNAME} -p${DB_PASSWORD} ${DB_DATABASE}`。
 
 **排障**：`.env` 含空格的值要加引号，否则容器反复重启、返回 503；改 `.env` 后 `sail restart laravel.test`；
 卡在「等待 MySQL 就绪」且容器 PORTS 列没有 `127.0.0.1:xxxx->` 映射，`sail down -v` 后重跑 `init.sh`。
