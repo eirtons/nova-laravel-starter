@@ -3,6 +3,12 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.4.0] - 2026-10-09
+
+- `inova/nova-admin` 升至 2.5.1（约束 `^2.5.1`）：新增通用内容位 `category_banner1` / `category_banner2`
+  （分类页 Banner，协议键 `category_banner_1/2` 与 webdeploy 对齐，未放渲染点只在 doctor 里警告）；
+  `<x-nova-seo />` 默认 canonical 保留分页参数（`/?page=2` 不再指回首页）；`composer audit` 无告警
+
 ## [2.3.1] - 2026-10-08
 
 - `inova/nova-admin` 升至 2.4.2：静态页标题与自动摘要解码 HTML 实体，修复含 `&`、`'` 的页面双重转义；
