@@ -21,6 +21,19 @@
 return [
 
     /*
+    | 建站预设：首次 seed 会随机分配领域 / 主题等的项目，登记后 webdeploy 发起建站时可下拉预选。
+    | Provider 实现 Inova\NovaAdmin\SitePresets\SitePresetProvider；seeder 写 site_preset('theme') ?? 原随机。
+    | 改了清单后运行 php artisan nova-admin:export-site-presets 并提交 site-presets.json（doctor 守一致）。
+    */
+    'site_presets' => [
+        // 'theme' => [
+        //     'label'    => '主题',
+        //     'provider' => App\Support\SitePresets\ThemePresetProvider::class,
+        //     'initial'  => env('NOVA_PRESET_THEME'),
+        // ],
+    ],
+
+    /*
     | 本站专属广告位：追加一行；去掉包内的位写 false，
     | 并同步处理 ads_protocol.position_map 里指向它的键。
     */

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e4828265d2a6429f406ad5b2d05daf67",
+    "content-hash": "7141ee82de322a34bad99fd4051d5e32",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2183,16 +2183,16 @@
         },
         {
             "name": "inova/nova-admin",
-            "version": "v2.5.1",
+            "version": "v2.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/eirtons/nova-admin.git",
-                "reference": "26ee80e18bab93d0a42e48f2d05c46e260499b59"
+                "reference": "168b933664f597ebfde6627c3160d299b83ff7de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/eirtons/nova-admin/zipball/26ee80e18bab93d0a42e48f2d05c46e260499b59",
-                "reference": "26ee80e18bab93d0a42e48f2d05c46e260499b59",
+                "url": "https://api.github.com/repos/eirtons/nova-admin/zipball/168b933664f597ebfde6627c3160d299b83ff7de",
+                "reference": "168b933664f597ebfde6627c3160d299b83ff7de",
                 "shasum": ""
             },
             "require": {
@@ -2231,9 +2231,9 @@
             "description": "多站点复用的通用后台底座：广告、站点设置、ads.txt、robots.txt、后台中文、登录与默认管理员（Laravel 12 + Filament 5）。",
             "support": {
                 "issues": "https://github.com/eirtons/nova-admin/issues",
-                "source": "https://github.com/eirtons/nova-admin/tree/v2.5.1"
+                "source": "https://github.com/eirtons/nova-admin/tree/v2.6.0"
             },
-            "time": "2026-10-09T06:45:56+00:00"
+            "time": "2026-10-12T09:30:53+00:00"
         },
         {
             "name": "kirschbaum-development/eloquent-power-joins",
