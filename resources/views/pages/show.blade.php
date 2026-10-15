@@ -12,7 +12,8 @@
 @extends('layouts.app')
 
 @section('title', $page->title)
-@section('description', $page->meta_description)
+{{-- 值为 null 时 @section 会变成块级开头（ob_start 永不关闭），必须给空串 --}}
+@section('description', $page->meta_description ?? '')
 @section('canonical', url('/'.$page->slug))
 
 @section('content')

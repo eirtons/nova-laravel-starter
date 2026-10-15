@@ -24,4 +24,17 @@ class FrontendSmokeTest extends TestCase
             ->assertNotFound()
             ->assertSee('Page not found');
     }
+
+    public function test_static_page_without_meta_description_closes_its_output_buffers(): void
+    {
+        // DatabaseSeeder 用 WithoutModelEvents，seed 出来的静态页 meta_description 为 null。
+        // @section('description', null) 会被 Blade 当成块级 section 开头，ob_start 永不关闭。
+        $this->seed();
+        \Inova\NovaAdmin\Models\StaticPage::query()->where('slug', 'about')->update(['meta_description' => null]);
+        $level = ob_get_level();
+
+        $this->get('/about')->assertOk();
+
+        $this->assertSame($level, ob_get_level());
+    }
 }
