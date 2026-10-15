@@ -3,6 +3,12 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.5.0] - 2026-10-14
+
+- `inova/nova-admin` 升至 2.8.0（约束 `^2.8`）：建站预设 `site_presets` 与 `nova-admin:export-site-presets`（2.6）、
+  webdeploy 站点配置下发命令 `nova-admin:site-ops`（2.7）、内容位广告的固定宽度素材与 GPT 容器居中（2.8，`ad-slot` 包装加 `class="ad"`）
+- `config/nova-admin.php` 增加 `site_presets` 注释示例；`composer audit` 无告警
+
 ## [2.4.0] - 2026-10-09
 
 - `inova/nova-admin` 升至 2.5.1（约束 `^2.5.1`）：新增通用内容位 `category_banner1` / `category_banner2`
