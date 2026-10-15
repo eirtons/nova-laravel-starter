@@ -3,6 +3,12 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.5.1] - 2026-10-14
+
+- 修复静态页 `meta_description` 为空时 `@section('description', null)` 被 Blade 当成块级 section、`ob_start` 永不关闭
+  （seed 用 `WithoutModelEvents`，新站每个法务页都会命中）；`FrontendSmokeTest` 补回归用例
+- `inova/nova-admin` 升至 2.8.1（约束 `^2.8.1`）：默认隐私政策补 `policies.google.com/technologies/ads` 链接；`composer audit` 无告警
+
 ## [2.5.0] - 2026-10-14
 
 - `inova/nova-admin` 升至 2.8.0（约束 `^2.8`）：建站预设 `site_presets` 与 `nova-admin:export-site-presets`（2.6）、
