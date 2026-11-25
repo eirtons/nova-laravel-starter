@@ -3,6 +3,14 @@
 本文件记录 Starter 每个版本的变更。`composer create-project` 取 Packagist 上最新 tag，
 Starter 有改动就要打 tag，否则新项目拿不到。版本主号与 `inova/nova-admin` 对齐。
 
+## [2.6.0] - 2026-11-25
+
+- `inova/nova-admin` 升至 2.10.1（约束 `^2.10.1`）：静态页占位符改为输出时按当前站点设置替换并附迁移（2.9.0–2.9.2）、
+  清空广告位同步清请求内与边缘缓存（2.9.3）、Sitemap 支持优先级排序（法务静态页置后）、`X-Robots-Tag: noindex`、
+  带锁重建命令 `nova-admin:build-sitemap`、5 万条 / 50MB 协议上限保护与静态页缓存联动（2.10.0–2.10.1）
+- 安全：`laravel/framework` 12.69.3 → 12.74.0、`livewire/livewire` 4.4.7 → 4.4.10、
+  `symfony/{html-sanitizer,http-foundation,http-kernel,mime,routing,yaml}` 升至 7.4.22 / 7.4.23，依赖随之升级；`composer audit` 无告警
+
 ## [2.5.1] - 2026-10-14
 
 - 修复静态页 `meta_description` 为空时 `@section('description', null)` 被 Blade 当成块级 section、`ob_start` 永不关闭
